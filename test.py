@@ -6,18 +6,17 @@ def setting():
     root_setting = Toplevel(root)
     window_width = 1270
     window_height = 600
-    screen_width = root_setting.winfo_screenwidth
-    screen_height = root_setting.winfo_screenheight() 
-    x_position = (screen_width - window_width ) // 2 
-    y_position = (screen_height - window_height ) // 2 
+    screen_width = root_setting.winfo_screenwidth()  # Add parentheses to call the method
+    screen_height = root_setting.winfo_screenheight()  # Add parentheses to call the method
+    x_position = (screen_width - window_width) // 2
+    y_position = (screen_height - window_height) // 2
     root_setting.geometry(f"{window_width}x{window_height}+{x_position}+{y_position}")
-    root_setting.resizable(False,False)
-    root_setting.columnconfigure(0,weight=1)
-    root_setting.rowconfigure(0,weight =1)
+    root_setting.resizable(False, False)
+    root_setting.columnconfigure(0, weight=1)
+    root_setting.rowconfigure(0, weight=1)
     root_setting.transient(root)
     root_setting.grab_set()
-    root_setting.mainloop
-
+    root_setting.mainloop()  # Call the method
 
 
 def add_to_textbox(textbox, dropdown):
