@@ -3,7 +3,7 @@ from tkinter import ttk, messagebox # Correctly import ttk for themed widgets
 from PIL import Image, ImageTk
 
 def setting():
-    root_setting = Toplevel(root)
+    root_setting = Toplevel(root) # <--- (note) This code is to keep the windows on top of another windows 
     window_width = 1270
     window_height = 600
     screen_width = root_setting.winfo_screenwidth()  # Add parentheses to call the method
@@ -14,8 +14,8 @@ def setting():
     root_setting.resizable(False, False)
     root_setting.columnconfigure(0, weight=1)
     root_setting.rowconfigure(0, weight=1)
-    root_setting.transient(root)
-    root_setting.grab_set()
+    root_setting.transient(root) # <--- (note) This code is to keep the windows on top of another windows 
+    root_setting.grab_set()  # <--- (note) This code is to keep the windows on top of another windows 
     root_setting.mainloop()  # Call the method
 
 
