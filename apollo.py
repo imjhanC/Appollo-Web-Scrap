@@ -13,8 +13,51 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.common.exceptions import TimeoutException, NoSuchElementException , StaleElementReferenceException
 
+# This is the class for display how many seconds left for the user to enter the 2FA code via authenticator (multithreading)
+class TwoFactorCountdown:
+    def __init__(self, count):
+        self.root = None
+        self.count = count
+        self.label_prefix = None
+        self.label_count = None
+        
+    def create_countdown_window(self):
+        # Ensure this runs in the main thread
+        self.root = tk.Tk()
+        self.root.title("Microsoft 2FA Countdown Timer")
+        self.root.wm_attributes("-topmost", 1)
+        self.root.geometry("300x100")
+        
+        frame = tk.Frame(self.root)
+        frame.pack(pady=20)
+        
+        self.label_prefix = tk.Label(frame, text="Time left for 2FA:", font=("Arial", 12))
+        self.label_prefix.grid(row=0, column=0)
+        
+        self.label_count = tk.Label(frame, text=f"{self.count} seconds", fg="red", font=("Arial", 14))
+        self.label_count.grid(row=0, column=1)
+        
+        self.update_countdown()
+        
+    def update_countdown(self):
+        if self.count > 0:
+            self.label_count.config(text=f"{self.count} seconds", fg="red")
+            self.count -= 1
+            self.root.after(1000, self.update_countdown)
+        else:
+            self.label_prefix.config(text="")
+            self.label_count.config(text="Time is up!", fg="black")
+            self.root.after(2000, self.root.destroy)  # Close after 2 seconds
+    
+    def start(self):
+        # Use Queue.Queue or threading.Event for thread-safe communication if needed
+        self.create_countdown_window()
+        self.root.mainloop()
+
+# This is the logic for interacting inside the apollo.io
 def login_to_apollo(workemail, password):
     driver = None
+    countdown = None 
     try:
         options = uc.ChromeOptions()
         options.add_argument('--start-minimized')
@@ -47,7 +90,10 @@ def login_to_apollo(workemail, password):
         signin_element = wait.until(EC.element_to_be_clickable((By.XPATH, "/html/body/div/form[1]/div/div/div[2]/div[1]/div/div/div/div/div/div[3]/div/div[2]/div/div[5]/div/div/div/div/input")))
         signin_element.click()
 
+        countdown = TwoFactorCountdown(15)
+        threading.Thread(target=countdown.start, daemon=True).start()
         time.sleep(15) # This is for authentication via 2FA
+        
         no_button = wait.until(EC.element_to_be_clickable((By.ID, "idBtn_Back")))
         no_button.click()
         # Wait until the login process completes or page is loaded
@@ -123,6 +169,7 @@ def apollo_login():
 
     # Buttons (e.g., Login)
     ttk.Button(frm, text="Login", command=lambda: on_submit(root_apollo)).grid(column=0, row=2, columnspan=3, pady=20)
+    root_apollo.bind("<Return>", lambda event: on_submit(root_apollo))
 
     root_apollo.mainloop()
 
