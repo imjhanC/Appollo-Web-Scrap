@@ -30,12 +30,16 @@ def setting():
 def add_to_textbox(textbox, dropdown):
     """Add the selected dropdown item to the textbox."""
     selected_item = dropdown.get()
+    textbox_values = textbox.get("1.0", "end-1c").strip()  
     
     if selected_item:
-        # Insert the selected item into the textbox with a comma and newline
-        textbox.insert(END, f"{selected_item}\n")
-        # Clear the dropdown selection
-        dropdown.set("")
+        if selected_item in textbox_values:
+            print("Already in textbox")
+        else:
+            # Insert the selected item into the textbox with a comma and newline
+            textbox.insert(END, f"{selected_item}\n")
+            # Clear the dropdown selection
+            dropdown.set("")
     else:
         print("No item selected from dropdown")
 
