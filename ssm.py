@@ -28,7 +28,7 @@ def login_to_ssm(username, password):
 
         # Find and click the "Login" button
         #login_button = wait.until(EC.element_to_be_clickable((By.XPATH, "//span[text()=' Login ']/parent::button")))  
-        login_button = wait.until(EC.presence_of_element_located((By.XPATH, "/html/body/div[2]/div[1]/div/div[2]/div/div/ul/li[2]/div/div/button[1]")))
+        login_button = wait.until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[2]/div[1]/div/div[2]/div/div/ul/li[2]/div/div/button[1]")))
         login_button.click()
         print("Click login")
         
@@ -46,8 +46,14 @@ def login_to_ssm(username, password):
         # Wait until the login process completes or page is loaded
         time.sleep(1250) 
     except Exception as e:
-        print(f"Error in login to SSM: {str(e)}")
-        return None
+            print(f"Error in login to SSM: {str(e)}")
+    finally:
+            try:
+                if driver:
+                    driver.quit()  # Ensure proper cleanup of the driver
+            except Exception as e:
+                print(f"Error during driver cleanup: {str(e)}")
+
     #return driver  # Return the driver object to interact further if necessary
     
 def on_submit(root):

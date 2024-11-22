@@ -2,6 +2,10 @@ from tkinter import *
 from tkinter import ttk, messagebox # Correctly import ttk for themed widgets
 from PIL import Image, ImageTk
 
+previous_text1 = ""
+previous_text2 = ""
+previous_text3 = ""
+
 def setting():
     root_setting = Toplevel(root) # <--- (note) This code is to keep the windows on top of another windows 
     window_width = 1270
@@ -18,13 +22,17 @@ def setting():
     root_setting.grab_set()  # <--- (note) This code is to keep the windows on top of another windows 
     root_setting.mainloop()  # Call the method
 
-
 def add_to_textbox(textbox, dropdown):
     """Add the selected dropdown item to the textbox."""
     selected_item = dropdown.get()
+    
     if selected_item:
-        textbox.insert(END, f"{selected_item},\n")
-        dropdown.set("")  # Clear the dropdown selection
+        # Insert the selected item into the textbox with a comma and newline
+        textbox.insert(END, f"{selected_item}\n")
+        # Clear the dropdown selection
+        dropdown.set("")
+    else:
+        print("No item selected from dropdown")
 
 def read_file(filename):
     """Read file contents and return as a list of strings."""
@@ -36,6 +44,53 @@ def read_file(filename):
         messagebox.showerror("File Not Found",f"File {filename} not found.")
         return []
 
+def confirm_window():
+    job_string = "\n".join(job_titles)
+    location_string = "\n".join(location)
+    industry_string = "\n".join(industry)
+    print(job_titles)
+    message = f"Job Title: {job_string}\n\nLocation: {location_string}\n\nIndustry: {industry_string}"
+
+        # Display a messagebox with Yes and No buttons
+    response = messagebox.askyesno("Confirm Action", f"Do you want to proceed with the details below?\n\n{message}")
+    
+    # Check the user's response
+    if response:  # If Yes was clicked
+        print("User clicked Yes")
+        # You can add code here to perform the action on "Yes"
+    else:  # If No was clicked
+        print("User clicked No")
+        # You can add code here to perform the action on "No"
+
+def on_text_change(text_type):
+    global location, industry, job_titles
+    global previous_text1, previous_text2, previous_text3
+
+    new_text1 = job_titles_textbox.get("1.0", "end-1c").strip()
+    new_text2 = location_textbox.get("1.0", "end-1c").strip()
+    new_text3 = industries_textbox.get("1.0", "end-1c").strip()
+
+    if (new_text1 != previous_text1) or (new_text2 != previous_text2) or (new_text3 != previous_text3):
+        if text_type == "Job Titles" and new_text1 != previous_text1:
+            temp_list = [item.strip() for item in new_text1.split("\n") if item.strip()]
+            job_titles = temp_list
+            previous_text1 = new_text1
+        elif text_type == "Location" and new_text2 != previous_text2:
+            temp_list = [item.strip() for item in new_text2.split("\n") if item.strip()]
+            location = temp_list
+            previous_text2 = new_text2
+        elif text_type == "Industries" and new_text3 != previous_text3:
+            temp_list = [item.strip() for item in new_text3.split("\n") if item.strip()]
+            industry = temp_list
+            previous_text3 = new_text3
+        else:
+            print("Bug")
+    
+    # Reset the modified state to allow the event to fire again
+    job_titles_textbox.edit_modified(False)
+    location_textbox.edit_modified(False)
+    industries_textbox.edit_modified(False)
+    
 root = Tk()
 # Configure window's height and width
 window_height = 600
@@ -88,6 +143,15 @@ industries_scrollbar = ttk.Scrollbar(industries_frame, orient=VERTICAL, command=
 industries_scrollbar.pack(side=RIGHT, fill=Y)
 industries_textbox.config(yscrollcommand=industries_scrollbar.set)
 
+# Bind the <<Modified>> event to detect changes in the Textbox
+
+previous_text1 = job_titles_textbox.get("1.0", "end-1c").strip()  # Initialize the previous_text with current content
+previous_text2 = location_textbox.get("1.0", "end-1c").strip()  # Initialize the previous_text with current content
+previous_text3 = industries_textbox.get("1.0", "end-1c").strip()  # Initialize the previous_text with current content
+job_titles_textbox.bind("<<Modified>>", lambda event: on_text_change("Job Titles"))
+location_textbox.bind("<<Modified>>", lambda event: on_text_change("Location"))
+industries_textbox.bind("<<Modified>>", lambda event: on_text_change("Industries"))
+
 # Read dropdown options from files
 job_titles = read_file("jobtitle.txt")
 locations = read_file("location.txt")
@@ -119,6 +183,10 @@ setting_image_tk = ImageTk.PhotoImage(setting_image)  # Convert to Tkinter-compa
 
 setting_button = Button(root, image=setting_image_tk,command=setting)  # Create the button with the image
 setting_button.grid(row=3, column=2, pady=20, padx=20, sticky="se")  # Place the button
+
+# Confirm button after selecting values
+confirm_button = ttk.Button(root, text="Confirm", command=confirm_window)
+confirm_button.grid(row=3, column=0, pady=10, padx=(600, 0), sticky="w")
 
 # Keep a reference to the image to prevent it from being garbage collected
 setting_button.image = setting_image_tk
