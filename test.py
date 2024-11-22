@@ -2,6 +2,11 @@ from tkinter import *
 from tkinter import ttk, messagebox # Correctly import ttk for themed widgets
 from PIL import Image, ImageTk
 
+# Declare global variables at the top of your script
+job_titles_value = []
+location_value = []
+industry_value = []
+
 previous_text1 = ""
 previous_text2 = ""
 previous_text3 = ""
@@ -45,25 +50,32 @@ def read_file(filename):
         return []
 
 def confirm_window():
-    job_string = "\n".join(job_titles)
-    location_string = "\n".join(location)
-    industry_string = "\n".join(industry)
-    print(job_titles)
-    message = f"Job Title: {job_string}\n\nLocation: {location_string}\n\nIndustry: {industry_string}"
+
+    if not job_titles_value or not location_value or not industry_value:
+        messagebox.showwarning(
+            "Warning",
+            "Please make sure all fields are not empty."
+        )
+    else:
+        job_string = "\n".join(job_titles_value)
+        location_string = "\n".join(location_value)
+        industry_string = "\n".join(industry_value)
+ 
+        message = f"Job Title: {job_string}\n\nLocation: {location_string}\n\nIndustry: {industry_string}"
 
         # Display a messagebox with Yes and No buttons
-    response = messagebox.askyesno("Confirm Action", f"Do you want to proceed with the details below?\n\n{message}")
+        response = messagebox.askyesno("Confirm Action", f"Do you want to proceed with the details below?\n\n{message}")
     
-    # Check the user's response
-    if response:  # If Yes was clicked
-        print("User clicked Yes")
-        # You can add code here to perform the action on "Yes"
-    else:  # If No was clicked
-        print("User clicked No")
-        # You can add code here to perform the action on "No"
+        # Check the user's response
+        if response:  # If Yes was clicked
+            print("User clicked Yes")
+            # You can add code here to perform the action on "Yes"
+        else:  # If No was clicked
+            print("User clicked No")
+            # You can add code here to perform the action on "No"
 
 def on_text_change(text_type):
-    global location, industry, job_titles
+    global location_value, industry_value, job_titles_value
     global previous_text1, previous_text2, previous_text3
 
     new_text1 = job_titles_textbox.get("1.0", "end-1c").strip()
@@ -73,15 +85,15 @@ def on_text_change(text_type):
     if (new_text1 != previous_text1) or (new_text2 != previous_text2) or (new_text3 != previous_text3):
         if text_type == "Job Titles" and new_text1 != previous_text1:
             temp_list = [item.strip() for item in new_text1.split("\n") if item.strip()]
-            job_titles = temp_list
+            job_titles_value = temp_list
             previous_text1 = new_text1
         elif text_type == "Location" and new_text2 != previous_text2:
             temp_list = [item.strip() for item in new_text2.split("\n") if item.strip()]
-            location = temp_list
+            location_value = temp_list
             previous_text2 = new_text2
         elif text_type == "Industries" and new_text3 != previous_text3:
             temp_list = [item.strip() for item in new_text3.split("\n") if item.strip()]
-            industry = temp_list
+            industry_value = temp_list
             previous_text3 = new_text3
         else:
             print("Bug")
@@ -143,11 +155,10 @@ industries_scrollbar = ttk.Scrollbar(industries_frame, orient=VERTICAL, command=
 industries_scrollbar.pack(side=RIGHT, fill=Y)
 industries_textbox.config(yscrollcommand=industries_scrollbar.set)
 
-# Bind the <<Modified>> event to detect changes in the Textbox
-
-previous_text1 = job_titles_textbox.get("1.0", "end-1c").strip()  # Initialize the previous_text with current content
-previous_text2 = location_textbox.get("1.0", "end-1c").strip()  # Initialize the previous_text with current content
-previous_text3 = industries_textbox.get("1.0", "end-1c").strip()  # Initialize the previous_text with current content
+# Bind the <<Modified>> event to detect changes in the Textbox, fires when there is a change
+previous_text1 = job_titles_textbox.get("1.0", "end-1c").strip()  
+previous_text2 = location_textbox.get("1.0", "end-1c").strip()  
+previous_text3 = industries_textbox.get("1.0", "end-1c").strip()  
 job_titles_textbox.bind("<<Modified>>", lambda event: on_text_change("Job Titles"))
 location_textbox.bind("<<Modified>>", lambda event: on_text_change("Location"))
 industries_textbox.bind("<<Modified>>", lambda event: on_text_change("Industries"))
