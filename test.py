@@ -11,150 +11,145 @@ previous_text1 = ""
 previous_text2 = ""
 previous_text3 = ""
 
+def reload_dropdowns():
+    """Reload all dropdown values from their respective files"""
+    global job_titles_dropdown, location_dropdown, industries_dropdown
+    
+    # Read updated values from files
+    job_titles = read_file("jobtitle.txt")
+    locations = read_file("location.txt")
+    industries = read_file("industry.txt")
+    
+    # Update dropdown values
+    job_titles_dropdown['values'] = job_titles
+    location_dropdown['values'] = locations
+    industries_dropdown['values'] = industries
+    
+    # Clear current selections
+    job_titles_dropdown.set('')
+    location_dropdown.set('')
+    industries_dropdown.set('')
+    
 def setting():
+    # Function to handle the opening of the industry section
     def on_industry_click():
         # Remove any existing widgets before creating a new one
         for widget in text_frame.winfo_children():
             widget.destroy()
 
-        # Create the label on top of the Text widget
-        label_industry = ttk.Label(text_frame, text="Current industries:", font=("Helvetica", 10, "bold"))
+        # Create a label for "Industry"
+        label_industry = ttk.Label(text_frame, text="Edit / Add Industry:", font=("Helvetica", 10, "bold"))
         label_industry.grid(row=0, column=0, padx=10, pady=5, sticky="w")
 
-        # Create the Text widget dynamically in its own frame
-        text_industry = Text(text_frame, width=30, height=20, wrap="word")
+        # Create the Text widget for displaying/editing industry content
+        text_industry = Text(text_frame, width=50, height=15, wrap="word")
         text_industry.grid(row=1, column=0, padx=10, pady=10, sticky="w")
 
         # Read from 'industry.txt' and insert the content into the Text widget
-        try:
-            with open("industry.txt", "r") as file:
-                content = file.read()
-                text_industry.insert("1.0", content)
-        except FileNotFoundError:
-            text_industry.insert("1.0", "industry.txt file not found.")
-        
-        # Add input widgets for adding new industry to the right of Text
-        add_label = ttk.Label(text_frame, text="Add Industry:", font=("Helvetica", 10, "bold"))
-        add_label.grid(row=0, column=1, padx=10, pady=5, sticky="w")
+        def load_industry():
+            try:
+                with open("industry.txt", "r") as file:
+                    content = file.read()
+                    text_industry.delete("1.0", "end")  # Clear any existing content
+                    text_industry.insert("1.0", content)
+            except FileNotFoundError:
+                text_industry.delete("1.0", "end")
+                text_industry.insert("1.0", "industry.txt file not found.")
 
-        add_entry = ttk.Entry(text_frame, width=30)
-        add_entry.grid(row=1, column=1, padx=10, pady=5, sticky="w")
+        load_industry()  # Load content initially
 
+        # Create a save button for saving the content
         def save_industry():
-            new_industry = add_entry.get()
-            # Save current content of the Text widget
-            content = text_industry.get("1.0", "end-1c")
+            content = text_industry.get("1.0", "end-1c")  # Get the content from the Text widget
             with open("industry.txt", "w") as file:
-                file.write(content)
-            # If the user adds something new, append it to the Text widget
-            if new_industry.strip():  # Only save non-empty input
-                text_industry.insert("end", f"\n{new_industry}")
-                with open("industry.txt", "a") as file:
-                    file.write(f"{new_industry}\n")
-            add_entry.delete(0, "end")
-
-        def cancel_industry():
-            add_entry.delete(0, "end")
+                file.write(content)  # Write the content to the file
 
         save_button = ttk.Button(text_frame, text="Save", command=save_industry)
-        save_button.grid(row=2, column=1, padx=10, pady=5, sticky="w")
+        save_button.grid(row=1, column=1, padx=5, pady=5, sticky="w")
 
-        cancel_button = ttk.Button(text_frame, text="Cancel", command=cancel_industry)
-        cancel_button.grid(row=3, column=1, padx=10, pady=5, sticky="w")
+        # Create a refresh button to reload the content
+        refresh_button = ttk.Button(text_frame, text="Refresh", command=load_industry)
+        refresh_button.grid(row=1, column=2, padx=5, pady=5, sticky="w")
 
+    # Function to handle the opening of the job title section
     def on_jobtitle_click():
         # Remove any existing widgets before creating a new one
         for widget in text_frame.winfo_children():
             widget.destroy()
 
-        label_jobtitle = ttk.Label(text_frame, text="Current job title:", font=("Helvetica", 10, "bold"))
+        # Create a label for "Job Title"
+        label_jobtitle = ttk.Label(text_frame, text="Edit / Add Job Title:", font=("Helvetica", 10, "bold"))
         label_jobtitle.grid(row=0, column=0, padx=10, pady=5, sticky="w")
 
-        text_jobtitle = Text(text_frame, width=30, height=20, wrap="word")
+        # Create the Text widget for displaying/editing job title content
+        text_jobtitle = Text(text_frame, width=50, height=15, wrap="word")
         text_jobtitle.grid(row=1, column=0, padx=10, pady=10, sticky="w")
 
-        try:
-            with open("jobtitle.txt", "r") as file:
-                content = file.read()
-                text_jobtitle.insert("1.0", content)
-        except FileNotFoundError:
-            text_jobtitle.insert("1.0", "jobtitle.txt file not found.")
+        # Read from 'jobtitle.txt' and insert the content into the Text widget
+        def load_jobtitle():
+            try:
+                with open("jobtitle.txt", "r") as file:
+                    content = file.read()
+                    text_jobtitle.delete("1.0", "end")  # Clear any existing content
+                    text_jobtitle.insert("1.0", content)
+            except FileNotFoundError:
+                text_jobtitle.delete("1.0", "end")
+                text_jobtitle.insert("1.0", "jobtitle.txt file not found.")
 
-        # Add input widgets for adding new job title to the right of Text
-        add_label = ttk.Label(text_frame, text="Add Job Title:", font=("Helvetica", 10, "bold"))
-        add_label.grid(row=0, column=1, padx=10, pady=5, sticky="w")
+        load_jobtitle()  # Load content initially
 
-        add_entry = ttk.Entry(text_frame, width=30)
-        add_entry.grid(row=1, column=1, padx=10, pady=5, sticky="w")
-
+        # Create a save button for saving the content
         def save_jobtitle():
-            new_jobtitle = add_entry.get()
-            # Save current content of the Text widget
-            content = text_jobtitle.get("1.0", "end-1c")
+            content = text_jobtitle.get("1.0", "end-1c")  # Get the content from the Text widget
             with open("jobtitle.txt", "w") as file:
-                file.write(content)
-            # If the user adds something new, append it to the Text widget
-            if new_jobtitle.strip():  # Only save non-empty input
-                text_jobtitle.insert("end", f"\n{new_jobtitle}")
-                with open("jobtitle.txt", "a") as file:
-                    file.write(f"{new_jobtitle}\n")
-            add_entry.delete(0, "end")
-
-        def cancel_jobtitle():
-            add_entry.delete(0, "end")
+                file.write(content)  # Write the content to the file
 
         save_button = ttk.Button(text_frame, text="Save", command=save_jobtitle)
-        save_button.grid(row=2, column=1, padx=10, pady=5, sticky="w")
+        save_button.grid(row=1, column=1, padx=5, pady=5, sticky="w")
 
-        cancel_button = ttk.Button(text_frame, text="Cancel", command=cancel_jobtitle)
-        cancel_button.grid(row=3, column=1, padx=10, pady=5, sticky="w")
+        # Create a refresh button to reload the content
+        refresh_button = ttk.Button(text_frame, text="Refresh", command=load_jobtitle)
+        refresh_button.grid(row=1, column=2, padx=5, pady=5, sticky="w")
 
+    # Function to handle the opening of the location section
     def on_location_click():
         # Remove any existing widgets before creating a new one
         for widget in text_frame.winfo_children():
             widget.destroy()
 
-        label_location = ttk.Label(text_frame, text="Current location:", font=("Helvetica", 10, "bold"))
+        # Create a label for "Location"
+        label_location = ttk.Label(text_frame, text="Edit / Add Location:", font=("Helvetica", 10, "bold"))
         label_location.grid(row=0, column=0, padx=10, pady=5, sticky="w")
 
-        text_location = Text(text_frame, width=30, height=20, wrap="word")
+        # Create the Text widget for displaying/editing location content
+        text_location = Text(text_frame, width=50, height=15, wrap="word")
         text_location.grid(row=1, column=0, padx=10, pady=10, sticky="w")
 
-        try:
-            with open("location.txt", "r") as file:
-                content = file.read()
-                text_location.insert("1.0", content)
-        except FileNotFoundError:
-            text_location.insert("1.0", "location.txt file not found.")
+        # Read from 'location.txt' and insert the content into the Text widget
+        def load_location():
+            try:
+                with open("location.txt", "r") as file:
+                    content = file.read()
+                    text_location.delete("1.0", "end")  # Clear any existing content
+                    text_location.insert("1.0", content)
+            except FileNotFoundError:
+                text_location.delete("1.0", "end")
+                text_location.insert("1.0", "location.txt file not found.")
 
-        # Add input widgets for adding new location to the right of Text
-        add_label = ttk.Label(text_frame, text="Add Location:", font=("Helvetica", 10, "bold"))
-        add_label.grid(row=0, column=1, padx=10, pady=5, sticky="w")
+        load_location()  # Load content initially
 
-        add_entry = ttk.Entry(text_frame, width=30)
-        add_entry.grid(row=1, column=1, padx=10, pady=5, sticky="w")
-
+        # Create a save button for saving the content
         def save_location():
-            new_location = add_entry.get()
-            # Save current content of the Text widget
-            content = text_location.get("1.0", "end-1c")
+            content = text_location.get("1.0", "end-1c")  # Get the content from the Text widget
             with open("location.txt", "w") as file:
-                file.write(content)
-            # If the user adds something new, append it to the Text widget
-            if new_location.strip():  # Only save non-empty input
-                text_location.insert("end", f"\n{new_location}")
-                with open("location.txt", "a") as file:
-                    file.write(f"{new_location}\n")
-            add_entry.delete(0, "end")
-
-        def cancel_location():
-            add_entry.delete(0, "end")
+                file.write(content)  # Write the content to the file
 
         save_button = ttk.Button(text_frame, text="Save", command=save_location)
-        save_button.grid(row=2, column=1, padx=10, pady=5, sticky="w")
+        save_button.grid(row=1, column=1, padx=5, pady=5, sticky="w")
 
-        cancel_button = ttk.Button(text_frame, text="Cancel", command=cancel_location)
-        cancel_button.grid(row=3, column=1, padx=10, pady=5, sticky="w")
+        # Create a refresh button to reload the content
+        refresh_button = ttk.Button(text_frame, text="Refresh", command=load_location)
+        refresh_button.grid(row=1, column=2, padx=5, pady=5, sticky="w")
 
     root_setting = Toplevel(root)  # Create a new top-level window
     root_setting.title("Settings") 
@@ -176,7 +171,7 @@ def setting():
 
     # Create a separate frame for the Text widget
     text_frame = ttk.Frame(setting_frm)
-    text_frame.grid(row=0, column=1, rowspan=3, padx=10, pady=10, sticky="nsew")
+    text_frame.grid(row=0, column=1, rowspan=3, padx=100, pady=10, sticky="nsew")
 
     # Industry Button
     industry_button = ttk.Button(setting_frm, text="Add industry", width=30, command=on_industry_click)
@@ -189,7 +184,7 @@ def setting():
     # Location Button
     location_button = ttk.Button(setting_frm, text="Add location", width=30, command=on_location_click)
     location_button.grid(row=2, column=0, pady=63, sticky="w")
-
+    root_setting.protocol("WM_DELETE_WINDOW", lambda: [root_setting.destroy(), reload_dropdowns()])
     root_setting.mainloop()  # Start the event loop
 
 def add_to_textbox(textbox, dropdown):
