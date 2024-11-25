@@ -41,11 +41,52 @@ def setting():
         label_industry = ttk.Label(text_frame, text="Edit / Add Industry:", font=("Helvetica", 10, "bold"))
         label_industry.grid(row=0, column=0, padx=10, pady=5, sticky="w")
 
-        # Create the Text widget for displaying/editing industry content
+        # Create a Text widget for displaying/editing industry content
         text_industry = Text(text_frame, width=50, height=15, wrap="word")
         text_industry.grid(row=1, column=0, padx=10, pady=10, sticky="w")
 
-        # Read from 'industry.txt' and insert the content into the Text widget
+        # Add a scrollbar for the Text widget
+        scrollbar_industry = ttk.Scrollbar(text_frame, orient="vertical", command=text_industry.yview)
+        scrollbar_industry.grid(row=1, column=1, padx=10, pady=10, sticky="ns")
+        text_industry.config(yscrollcommand=scrollbar_industry.set)
+
+        # Add an Entry widget to add a new industry
+        entry_industry = ttk.Entry(text_frame, width=62)
+        entry_industry.grid(row=2, column=0, padx=10, pady=5, sticky="w")
+
+        # Save button for the new industry
+        def save_new_industry():
+            new_industry = entry_industry.get()
+            if new_industry:
+                # Append to the industry.txt file
+                with open("industry.txt", "a") as file:
+                    file.write(new_industry + "\n")
+                # Clear the entry widget and reload content
+                entry_industry.delete(0, END)
+                load_industry()  # Reload the industry content to reflect the new addition
+
+        # Save button for the content of Text widget (Industry)
+        def save_industry():
+            content = text_industry.get("1.0", "end-1c")  # Get the content from the Text widget
+            with open("industry.txt", "w") as file:
+                file.write(content)  # Write the content to the file
+            load_industry()  # Reload content after saving
+
+        # Clear button for the entry field
+        def clear_industry_entry():
+            entry_industry.delete(0, END)
+
+        def save_combined():
+            save_new_industry()
+            save_industry()
+
+        save_button = ttk.Button(text_frame, text="Save", command=save_combined)
+        save_button.grid(row=2, column=1, padx=5, pady=5, sticky="w")
+
+        clear_button = ttk.Button(text_frame, text="Clear", command=clear_industry_entry)
+        clear_button.grid(row=2, column=2, padx=5, pady=5, sticky="w")
+
+        # Refresh button to reload the content
         def load_industry():
             try:
                 with open("industry.txt", "r") as file:
@@ -58,18 +99,6 @@ def setting():
 
         load_industry()  # Load content initially
 
-        # Create a save button for saving the content
-        def save_industry():
-            content = text_industry.get("1.0", "end-1c")  # Get the content from the Text widget
-            with open("industry.txt", "w") as file:
-                file.write(content)  # Write the content to the file
-
-        save_button = ttk.Button(text_frame, text="Save", command=save_industry)
-        save_button.grid(row=1, column=1, padx=5, pady=5, sticky="w")
-
-        # Create a refresh button to reload the content
-        refresh_button = ttk.Button(text_frame, text="Refresh", command=load_industry)
-        refresh_button.grid(row=1, column=2, padx=5, pady=5, sticky="w")
 
     # Function to handle the opening of the job title section
     def on_jobtitle_click():
@@ -81,11 +110,52 @@ def setting():
         label_jobtitle = ttk.Label(text_frame, text="Edit / Add Job Title:", font=("Helvetica", 10, "bold"))
         label_jobtitle.grid(row=0, column=0, padx=10, pady=5, sticky="w")
 
-        # Create the Text widget for displaying/editing job title content
+        # Create a Text widget for displaying/editing job title content
         text_jobtitle = Text(text_frame, width=50, height=15, wrap="word")
         text_jobtitle.grid(row=1, column=0, padx=10, pady=10, sticky="w")
 
-        # Read from 'jobtitle.txt' and insert the content into the Text widget
+        # Add a scrollbar for the Text widget
+        scrollbar_jobtitle = ttk.Scrollbar(text_frame, orient="vertical", command=text_jobtitle.yview)
+        scrollbar_jobtitle.grid(row=1, column=1, padx=10, pady=10, sticky="ns")
+        text_jobtitle.config(yscrollcommand=scrollbar_jobtitle.set)
+
+        # Add an Entry widget to add a new job title
+        entry_jobtitle = ttk.Entry(text_frame, width=62)
+        entry_jobtitle.grid(row=2, column=0, padx=10, pady=5, sticky="w")
+
+        # Save button for the new job title
+        def save_new_jobtitle():
+            new_jobtitle = entry_jobtitle.get()
+            if new_jobtitle:
+                # Append to the jobtitle.txt file
+                with open("jobtitle.txt", "a") as file:
+                    file.write(new_jobtitle + "\n")
+                # Clear the entry widget and reload content
+                entry_jobtitle.delete(0, END)
+                load_jobtitle()  # Reload the job title content to reflect the new addition
+
+        # Save button for the content of Text widget (Job Title)
+        def save_jobtitle():
+            content = text_jobtitle.get("1.0", "end-1c")  # Get the content from the Text widget
+            with open("jobtitle.txt", "w") as file:
+                file.write(content)  # Write the content to the file
+            load_jobtitle()  # Reload content after saving
+
+        # Clear button for the entry field
+        def clear_jobtitle_entry():
+            entry_jobtitle.delete(0, END)
+
+        def save_combined():
+            save_new_jobtitle()
+            save_jobtitle()
+
+        save_button = ttk.Button(text_frame, text="Save", command=save_combined)
+        save_button.grid(row=2, column=1, padx=5, pady=5, sticky="w")
+
+        clear_button = ttk.Button(text_frame, text="Clear", command=clear_jobtitle_entry)
+        clear_button.grid(row=2, column=2, padx=5, pady=5, sticky="w")
+
+        # Refresh button to reload the content
         def load_jobtitle():
             try:
                 with open("jobtitle.txt", "r") as file:
@@ -98,18 +168,6 @@ def setting():
 
         load_jobtitle()  # Load content initially
 
-        # Create a save button for saving the content
-        def save_jobtitle():
-            content = text_jobtitle.get("1.0", "end-1c")  # Get the content from the Text widget
-            with open("jobtitle.txt", "w") as file:
-                file.write(content)  # Write the content to the file
-
-        save_button = ttk.Button(text_frame, text="Save", command=save_jobtitle)
-        save_button.grid(row=1, column=1, padx=5, pady=5, sticky="w")
-
-        # Create a refresh button to reload the content
-        refresh_button = ttk.Button(text_frame, text="Refresh", command=load_jobtitle)
-        refresh_button.grid(row=1, column=2, padx=5, pady=5, sticky="w")
 
     # Function to handle the opening of the location section
     def on_location_click():
@@ -121,11 +179,52 @@ def setting():
         label_location = ttk.Label(text_frame, text="Edit / Add Location:", font=("Helvetica", 10, "bold"))
         label_location.grid(row=0, column=0, padx=10, pady=5, sticky="w")
 
-        # Create the Text widget for displaying/editing location content
+        # Create a Text widget for displaying/editing location content
         text_location = Text(text_frame, width=50, height=15, wrap="word")
         text_location.grid(row=1, column=0, padx=10, pady=10, sticky="w")
 
-        # Read from 'location.txt' and insert the content into the Text widget
+        # Add a scrollbar for the Text widget
+        scrollbar_location = ttk.Scrollbar(text_frame, orient="vertical", command=text_location.yview)
+        scrollbar_location.grid(row=1, column=1, padx=10, pady=10, sticky="ns")
+        text_location.config(yscrollcommand=scrollbar_location.set)
+
+        # Add an Entry widget to add a new location
+        entry_location = ttk.Entry(text_frame, width=62)
+        entry_location.grid(row=2, column=0, padx=10, pady=5, sticky="w")
+
+        # Save button for the new location
+        def save_new_location():
+            new_location = entry_location.get()
+            if new_location:
+                # Append to the location.txt file
+                with open("location.txt", "a") as file:
+                    file.write(new_location + "\n")
+                # Clear the entry widget and reload content
+                entry_location.delete(0, END)
+                load_location()  # Reload the location content to reflect the new addition
+
+        # Save button for the content of Text widget (Location)
+        def save_location():
+            content = text_location.get("1.0", "end-1c")  # Get the content from the Text widget
+            with open("location.txt", "w") as file:
+                file.write(content)  # Write the content to the file
+            load_location()  # Reload content after saving
+
+        # Clear button for the entry field
+        def clear_location_entry():
+            entry_location.delete(0, END)
+
+        def save_combined():
+            save_new_location()
+            save_location()
+
+        save_button = ttk.Button(text_frame, text="Save", command=save_combined)
+        save_button.grid(row=2, column=1, padx=5, pady=5, sticky="w")
+
+        clear_button = ttk.Button(text_frame, text="Clear", command=clear_location_entry)
+        clear_button.grid(row=2, column=2, padx=5, pady=5, sticky="w")
+
+        # Refresh button to reload the content
         def load_location():
             try:
                 with open("location.txt", "r") as file:
@@ -138,18 +237,7 @@ def setting():
 
         load_location()  # Load content initially
 
-        # Create a save button for saving the content
-        def save_location():
-            content = text_location.get("1.0", "end-1c")  # Get the content from the Text widget
-            with open("location.txt", "w") as file:
-                file.write(content)  # Write the content to the file
 
-        save_button = ttk.Button(text_frame, text="Save", command=save_location)
-        save_button.grid(row=1, column=1, padx=5, pady=5, sticky="w")
-
-        # Create a refresh button to reload the content
-        refresh_button = ttk.Button(text_frame, text="Refresh", command=load_location)
-        refresh_button.grid(row=1, column=2, padx=5, pady=5, sticky="w")
 
     root_setting = Toplevel(root)  # Create a new top-level window
     root_setting.title("Settings") 
