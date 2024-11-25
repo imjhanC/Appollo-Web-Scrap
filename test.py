@@ -12,20 +12,185 @@ previous_text2 = ""
 previous_text3 = ""
 
 def setting():
-    root_setting = Toplevel(root) # <--- (note) This code is to keep the windows on top of another windows 
+    def on_industry_click():
+        # Remove any existing widgets before creating a new one
+        for widget in text_frame.winfo_children():
+            widget.destroy()
+
+        # Create the label on top of the Text widget
+        label_industry = ttk.Label(text_frame, text="Current industries:", font=("Helvetica", 10, "bold"))
+        label_industry.grid(row=0, column=0, padx=10, pady=5, sticky="w")
+
+        # Create the Text widget dynamically in its own frame
+        text_industry = Text(text_frame, width=30, height=20, wrap="word")
+        text_industry.grid(row=1, column=0, padx=10, pady=10, sticky="w")
+
+        # Read from 'industry.txt' and insert the content into the Text widget
+        try:
+            with open("industry.txt", "r") as file:
+                content = file.read()
+                text_industry.insert("1.0", content)
+        except FileNotFoundError:
+            text_industry.insert("1.0", "industry.txt file not found.")
+        
+        # Add input widgets for adding new industry to the right of Text
+        add_label = ttk.Label(text_frame, text="Add Industry:", font=("Helvetica", 10, "bold"))
+        add_label.grid(row=0, column=1, padx=10, pady=5, sticky="w")
+
+        add_entry = ttk.Entry(text_frame, width=30)
+        add_entry.grid(row=1, column=1, padx=10, pady=5, sticky="w")
+
+        def save_industry():
+            new_industry = add_entry.get()
+            # Save current content of the Text widget
+            content = text_industry.get("1.0", "end-1c")
+            with open("industry.txt", "w") as file:
+                file.write(content)
+            # If the user adds something new, append it to the Text widget
+            if new_industry.strip():  # Only save non-empty input
+                text_industry.insert("end", f"\n{new_industry}")
+                with open("industry.txt", "a") as file:
+                    file.write(f"{new_industry}\n")
+            add_entry.delete(0, "end")
+
+        def cancel_industry():
+            add_entry.delete(0, "end")
+
+        save_button = ttk.Button(text_frame, text="Save", command=save_industry)
+        save_button.grid(row=2, column=1, padx=10, pady=5, sticky="w")
+
+        cancel_button = ttk.Button(text_frame, text="Cancel", command=cancel_industry)
+        cancel_button.grid(row=3, column=1, padx=10, pady=5, sticky="w")
+
+    def on_jobtitle_click():
+        # Remove any existing widgets before creating a new one
+        for widget in text_frame.winfo_children():
+            widget.destroy()
+
+        label_jobtitle = ttk.Label(text_frame, text="Current job title:", font=("Helvetica", 10, "bold"))
+        label_jobtitle.grid(row=0, column=0, padx=10, pady=5, sticky="w")
+
+        text_jobtitle = Text(text_frame, width=30, height=20, wrap="word")
+        text_jobtitle.grid(row=1, column=0, padx=10, pady=10, sticky="w")
+
+        try:
+            with open("jobtitle.txt", "r") as file:
+                content = file.read()
+                text_jobtitle.insert("1.0", content)
+        except FileNotFoundError:
+            text_jobtitle.insert("1.0", "jobtitle.txt file not found.")
+
+        # Add input widgets for adding new job title to the right of Text
+        add_label = ttk.Label(text_frame, text="Add Job Title:", font=("Helvetica", 10, "bold"))
+        add_label.grid(row=0, column=1, padx=10, pady=5, sticky="w")
+
+        add_entry = ttk.Entry(text_frame, width=30)
+        add_entry.grid(row=1, column=1, padx=10, pady=5, sticky="w")
+
+        def save_jobtitle():
+            new_jobtitle = add_entry.get()
+            # Save current content of the Text widget
+            content = text_jobtitle.get("1.0", "end-1c")
+            with open("jobtitle.txt", "w") as file:
+                file.write(content)
+            # If the user adds something new, append it to the Text widget
+            if new_jobtitle.strip():  # Only save non-empty input
+                text_jobtitle.insert("end", f"\n{new_jobtitle}")
+                with open("jobtitle.txt", "a") as file:
+                    file.write(f"{new_jobtitle}\n")
+            add_entry.delete(0, "end")
+
+        def cancel_jobtitle():
+            add_entry.delete(0, "end")
+
+        save_button = ttk.Button(text_frame, text="Save", command=save_jobtitle)
+        save_button.grid(row=2, column=1, padx=10, pady=5, sticky="w")
+
+        cancel_button = ttk.Button(text_frame, text="Cancel", command=cancel_jobtitle)
+        cancel_button.grid(row=3, column=1, padx=10, pady=5, sticky="w")
+
+    def on_location_click():
+        # Remove any existing widgets before creating a new one
+        for widget in text_frame.winfo_children():
+            widget.destroy()
+
+        label_location = ttk.Label(text_frame, text="Current location:", font=("Helvetica", 10, "bold"))
+        label_location.grid(row=0, column=0, padx=10, pady=5, sticky="w")
+
+        text_location = Text(text_frame, width=30, height=20, wrap="word")
+        text_location.grid(row=1, column=0, padx=10, pady=10, sticky="w")
+
+        try:
+            with open("location.txt", "r") as file:
+                content = file.read()
+                text_location.insert("1.0", content)
+        except FileNotFoundError:
+            text_location.insert("1.0", "location.txt file not found.")
+
+        # Add input widgets for adding new location to the right of Text
+        add_label = ttk.Label(text_frame, text="Add Location:", font=("Helvetica", 10, "bold"))
+        add_label.grid(row=0, column=1, padx=10, pady=5, sticky="w")
+
+        add_entry = ttk.Entry(text_frame, width=30)
+        add_entry.grid(row=1, column=1, padx=10, pady=5, sticky="w")
+
+        def save_location():
+            new_location = add_entry.get()
+            # Save current content of the Text widget
+            content = text_location.get("1.0", "end-1c")
+            with open("location.txt", "w") as file:
+                file.write(content)
+            # If the user adds something new, append it to the Text widget
+            if new_location.strip():  # Only save non-empty input
+                text_location.insert("end", f"\n{new_location}")
+                with open("location.txt", "a") as file:
+                    file.write(f"{new_location}\n")
+            add_entry.delete(0, "end")
+
+        def cancel_location():
+            add_entry.delete(0, "end")
+
+        save_button = ttk.Button(text_frame, text="Save", command=save_location)
+        save_button.grid(row=2, column=1, padx=10, pady=5, sticky="w")
+
+        cancel_button = ttk.Button(text_frame, text="Cancel", command=cancel_location)
+        cancel_button.grid(row=3, column=1, padx=10, pady=5, sticky="w")
+
+    root_setting = Toplevel(root)  # Create a new top-level window
+    root_setting.title("Settings") 
     window_width = 1270
     window_height = 600
-    screen_width = root_setting.winfo_screenwidth()  # Add parentheses to call the method
-    screen_height = root_setting.winfo_screenheight()  # Add parentheses to call the method
+    screen_width = root_setting.winfo_screenwidth()  # Get screen width
+    screen_height = root_setting.winfo_screenheight()  # Get screen height
     x_position = (screen_width - window_width) // 2
     y_position = (screen_height - window_height) // 2
     root_setting.geometry(f"{window_width}x{window_height}+{x_position}+{y_position}")
     root_setting.resizable(False, False)
     root_setting.columnconfigure(0, weight=1)
     root_setting.rowconfigure(0, weight=1)
-    root_setting.transient(root) # <--- (note) This code is to keep the windows on top of another windows 
-    root_setting.grab_set()  # <--- (note) This code is to keep the windows on top of another windows 
-    root_setting.mainloop()  # Call the method
+    root_setting.transient(root)  # Keep the window on top
+    root_setting.grab_set()  # Prevent interaction with the parent window
+
+    setting_frm = ttk.Frame(root_setting, padding=20)
+    setting_frm.grid(row=0, column=0, sticky="nsew")
+
+    # Create a separate frame for the Text widget
+    text_frame = ttk.Frame(setting_frm)
+    text_frame.grid(row=0, column=1, rowspan=3, padx=10, pady=10, sticky="nsew")
+
+    # Industry Button
+    industry_button = ttk.Button(setting_frm, text="Add industry", width=30, command=on_industry_click)
+    industry_button.grid(row=0, column=0, pady=63, sticky="w")
+
+    # Job Title Button
+    jobtitle_button = ttk.Button(setting_frm, text="Add job title", width=30, command=on_jobtitle_click)
+    jobtitle_button.grid(row=1, column=0, pady=63, sticky="w")
+
+    # Location Button
+    location_button = ttk.Button(setting_frm, text="Add location", width=30, command=on_location_click)
+    location_button.grid(row=2, column=0, pady=63, sticky="w")
+
+    root_setting.mainloop()  # Start the event loop
 
 def add_to_textbox(textbox, dropdown):
     """Add the selected dropdown item to the textbox."""
@@ -53,6 +218,7 @@ def read_file(filename):
         messagebox.showerror("File Not Found",f"File {filename} not found.")
         return []
 
+# This is for the confirmation windows 
 def confirm_window():
 
     if not job_titles_value or not location_value or not industry_value:
@@ -65,7 +231,7 @@ def confirm_window():
         location_string = "\n".join(location_value)
         industry_string = "\n".join(industry_value)
  
-        message = f"Job Title: {job_string}\n\nLocation: {location_string}\n\nIndustry: {industry_string}"
+        message = f"**Job Title** : \n{job_string}\n\n**Location** : \n{location_string}\n\n**Industry** : \n{industry_string}"
 
         # Display a messagebox with Yes and No buttons
         response = messagebox.askyesno("Confirm Action", f"Do you want to proceed with the details below?\n\n{message}")
