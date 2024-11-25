@@ -54,10 +54,31 @@ def setting():
         entry_industry = ttk.Entry(text_frame, width=62)
         entry_industry.grid(row=2, column=0, padx=10, pady=5, sticky="w")
 
+        # Placeholder text for entry_industry
+        placeholder_industry = "Enter new industry here..."
+
+        def on_focus_in_industry(event):
+            if entry_industry.get() == placeholder_industry:
+                entry_industry.delete(0, END)  # Clear placeholder text
+                entry_industry.config(foreground="black")
+
+        def on_focus_out_industry(event):
+            if entry_industry.get() == "":
+                entry_industry.insert(0, placeholder_industry)
+                entry_industry.config(foreground="gray")
+
+        # Set the placeholder text initially
+        entry_industry.insert(0, placeholder_industry)
+        entry_industry.config(foreground="gray")
+
+        # Bind focus events to handle placeholder text
+        entry_industry.bind("<FocusIn>", on_focus_in_industry)
+        entry_industry.bind("<FocusOut>", on_focus_out_industry)
+
         # Save button for the new industry
         def save_new_industry():
             new_industry = entry_industry.get()
-            if new_industry:
+            if new_industry and new_industry != placeholder_industry:
                 # Append to the industry.txt file
                 with open("industry.txt", "a") as file:
                     file.write(new_industry + "\n")
@@ -123,10 +144,31 @@ def setting():
         entry_jobtitle = ttk.Entry(text_frame, width=62)
         entry_jobtitle.grid(row=2, column=0, padx=10, pady=5, sticky="w")
 
+        # Placeholder text for entry_jobtitle
+        placeholder_jobtitle = "Enter new job title here..."
+
+        def on_focus_in_jobtitle(event):
+            if entry_jobtitle.get() == placeholder_jobtitle:
+                entry_jobtitle.delete(0, END)  # Clear placeholder text
+                entry_jobtitle.config(foreground="black")
+
+        def on_focus_out_jobtitle(event):
+            if entry_jobtitle.get() == "":
+                entry_jobtitle.insert(0, placeholder_jobtitle)
+                entry_jobtitle.config(foreground="gray")
+
+        # Set the placeholder text initially
+        entry_jobtitle.insert(0, placeholder_jobtitle)
+        entry_jobtitle.config(foreground="gray")
+
+        # Bind focus events to handle placeholder text
+        entry_jobtitle.bind("<FocusIn>", on_focus_in_jobtitle)
+        entry_jobtitle.bind("<FocusOut>", on_focus_out_jobtitle)
+
         # Save button for the new job title
         def save_new_jobtitle():
             new_jobtitle = entry_jobtitle.get()
-            if new_jobtitle:
+            if new_jobtitle and new_jobtitle != placeholder_jobtitle:
                 # Append to the jobtitle.txt file
                 with open("jobtitle.txt", "a") as file:
                     file.write(new_jobtitle + "\n")
@@ -192,10 +234,31 @@ def setting():
         entry_location = ttk.Entry(text_frame, width=62)
         entry_location.grid(row=2, column=0, padx=10, pady=5, sticky="w")
 
+        # Placeholder text for entry_location
+        placeholder_location = "Enter new location here..."
+
+        def on_focus_in_location(event):
+            if entry_location.get() == placeholder_location:
+                entry_location.delete(0, END)  # Clear placeholder text
+                entry_location.config(foreground="black")
+
+        def on_focus_out_location(event):
+            if entry_location.get() == "":
+                entry_location.insert(0, placeholder_location)
+                entry_location.config(foreground="gray")
+
+        # Set the placeholder text initially
+        entry_location.insert(0, placeholder_location)
+        entry_location.config(foreground="gray")
+
+        # Bind focus events to handle placeholder text
+        entry_location.bind("<FocusIn>", on_focus_in_location)
+        entry_location.bind("<FocusOut>", on_focus_out_location)
+
         # Save button for the new location
         def save_new_location():
             new_location = entry_location.get()
-            if new_location:
+            if new_location and new_location != placeholder_location:
                 # Append to the location.txt file
                 with open("location.txt", "a") as file:
                     file.write(new_location + "\n")
@@ -236,6 +299,7 @@ def setting():
                 text_location.insert("1.0", "location.txt file not found.")
 
         load_location()  # Load content initially
+
 
 
 
