@@ -385,8 +385,10 @@ def confirm_window():
     
         # Check the user's response
         if response:  # If Yes was clicked
-            print("User clicked Yes")
-            return job_string,location_string,industry_string
+            print("Job Titles:", job_titles_value)
+            print("Locations:", location_value)
+            print("Industries:", industry_value)
+            return job_titles_value,location_value,industry_value
         else:  # If No was clicked
             print("User clicked No")
             # You can add code here to perform the action on "No"
