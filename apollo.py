@@ -420,31 +420,31 @@ def select_details_gui():
             return []
 
     def confirm_window():
+        nonlocal job_titles_value, location_value, industry_value
         if not job_titles_value or not location_value or not industry_value:
             messagebox.showwarning(
                 "Warning",
                 "Please make sure all fields are not empty."
             )
-        else:
-            job_string = "\n".join(job_titles_value)
-            location_string = "\n".join(location_value)
-            industry_string = "\n".join(industry_value)
-    
-            message = f"**Job Title** : \n{job_string}\n\n**Location** : \n{location_string}\n\n**Industry** : \n{industry_string}"
-
-            # Display a messagebox with Yes and No buttons
-            response = messagebox.askyesno("Confirm Action", f"Do you want to proceed with the details below?\n\n{message}")
+            return None
         
-            # Check the user's response
-            if response:  # If Yes was clicked
-                print("Job Titles:", job_titles_value)
-                print("Locations:", location_value)
-                print("Industries:", industry_value)
-                return job_titles_value,location_value,industry_value
-            else:  # If No was clicked
-                print("User clicked No")
-                # You can add code here to perform the action on "No"
-                return None 
+        job_string = "\n".join(job_titles_value)
+        location_string = "\n".join(location_value)
+        industry_string = "\n".join(industry_value)
+    
+        message = f"**Job Title** : \n{job_string}\n\n**Location** : \n{location_string}\n\n**Industry** : \n{industry_string}"
+
+        # Display a messagebox with Yes and No buttons
+        if messagebox.askyesno("Confirm Action", f"Do you want to proceed with the details below?\n\n{message}"):
+            print("Job Titles:", job_titles_value)
+            print("Locations:", location_value)
+            print("Industries:", industry_value)
+            root.quit()
+            return (job_titles_value, location_value, industry_value)
+        else:
+            print("User clicked No")
+            pass
+            return None 
 
     def on_text_change(text_type):
         nonlocal location_value, industry_value, job_titles_value
@@ -568,13 +568,30 @@ def select_details_gui():
     setting_button = Button(root, image=setting_image_tk,command=setting)  # Create the button with the image
     setting_button.grid(row=3, column=2, pady=20, padx=20, sticky="se")  # Place the button
 
+
+    result = None
+    def combined_command():
+        nonlocal result
+        result = confirm_window()
+        if result is not None:
+            root.quit()
+
     # Confirm button after selecting values
-    confirm_button = ttk.Button(root, text="Confirm", command=confirm_window)
+    confirm_button = ttk.Button(root, text="Confirm", command=combined_command)
     confirm_button.grid(row=3, column=0, pady=10, padx=(600, 0), sticky="w")
+    
+    def on_closing():
+        nonlocal result
+        result = None
+        root.quit()
 
     # Keep a reference to the image to prevent it from being garbage collected
     setting_button.image = setting_image_tk
+    root.protocol("WM_DELETE_WINDOW", on_closing)
     root.mainloop()
+    root.destroy()
+
+    return result
 
 # This is the logic for interacting inside the apollo.io
 def login_to_apollo(workemail, password):
@@ -625,11 +642,16 @@ def login_to_apollo(workemail, password):
         people_element.click()
         
         received_text = select_details_gui()
-        print("Debug")
-        job_titles, locations, industries = received_text
-        print("Job Titles:", job_titles)
-        print("Locations:", locations)
-        print("Industries:", industries)
+        if received_text is not None:
+            job_titles, locations, industries = received_text
+            print("Debugg")
+            print("Job Titles:", job_titles)
+            print("Locations:", locations)
+            print("Industries:", industries)
+            
+            # Continue with the rest of the Apollo.io interaction
+        else:
+            print("No details selected or user cancelled.")
         
         # Job title Input
         job_titles_element = WebDriverWait(driver, 10).until(
