@@ -386,10 +386,11 @@ def confirm_window():
         # Check the user's response
         if response:  # If Yes was clicked
             print("User clicked Yes")
-            # You can add code here to perform the action on "Yes"
+            return job_string,location_string,industry_string
         else:  # If No was clicked
             print("User clicked No")
             # You can add code here to perform the action on "No"
+            return None 
 
 def on_text_change(text_type):
     global location_value, industry_value, job_titles_value

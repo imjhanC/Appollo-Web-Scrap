@@ -5,6 +5,7 @@ import sys
 import os
 import threading
 import time 
+from PIL import Image, ImageTk 
 import undetected_chromedriver as uc
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -96,7 +97,81 @@ def login_to_apollo(workemail, password):
         
         no_button = wait.until(EC.element_to_be_clickable((By.ID, "idBtn_Back")))
         no_button.click()
-        # Wait until the login process completes or page is loaded
+        
+        people_element = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.XPATH, "//div[@class='zp_aoXyS' and contains(text(), 'People')]"))
+        )
+        people_element.click()
+        
+        # Job title Input
+        job_titles_element = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.XPATH, "//span[text()='Job Titles']"))
+        )
+        job_titles_element.click()
+
+        placeholder_element = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.CLASS_NAME, "Select-placeholder"))
+        )
+        placeholder_element.click()  # Click the placeholder
+        job_title_input = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, "input.Select-input"))
+        )
+        test_jobtitle = "Software Engineer"   # The data input is HERE
+        job_title_input.send_keys(test_jobtitle)
+        job_title_input.send_keys(Keys.RETURN)
+
+        job_titles_element = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.XPATH, "//span[text()='Job Titles']"))
+        )
+        job_titles_element.click()
+
+        # Location Input
+        location_element = WebDriverWait(driver,10).until(
+            EC.element_to_be_clickable((By.XPATH, "//span[text()='Location']"))
+        )
+        location_element.click()
+        placeholder_element = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.CLASS_NAME, "Select-placeholder"))
+        )
+        placeholder_element.click()
+        input_element = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.CLASS_NAME, "Select-input"))
+        )
+        location_text = "Selangor"
+        input_element.send_keys(location_text)
+        input_element.send_keys(Keys.RETURN)
+        location_element = WebDriverWait(driver,10).until(
+            EC.element_to_be_clickable((By.XPATH, "//span[text()='Location']"))
+        )
+        location_element.click()
+
+        #Industry & Keywords
+        industry_keywords_element = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.XPATH, "//span[text()='Industry & Keywords']"))
+        )
+        industry_keywords_element.click()
+        placeholder_element = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.XPATH, "//div[contains(@class, 'Select-placeholder') and text()='Search industries...']"))
+        )
+        driver.execute_script("arguments[0].scrollIntoView(true);", placeholder_element)
+        placeholder_element.click()  # Click the placeholder to focus the input field
+        input_element = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.XPATH, "//input[contains(@class, 'Select-input')]"))
+        )
+        industry_text = "Electronics"
+        input_element.send_keys(industry_text)
+        input_element.send_keys(Keys.RETURN)
+        industry_keywords_element = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.XPATH, "//span[text()='Industry & Keywords']"))
+        )
+        industry_keywords_element.click()
+
+        # This is to hide the filter 
+        hide_filters_element = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.XPATH, "//span[@class='zp_tZMYK' and text()='Hide Filters']"))
+        )
+        hide_filters_element.click()
+
         time.sleep(1250) 
 
     except Exception as e:
