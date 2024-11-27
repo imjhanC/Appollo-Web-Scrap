@@ -644,7 +644,7 @@ def login_to_apollo(workemail, password):
         received_text = select_details_gui()
         if received_text is not None:
             job_titles, locations, industries = received_text
-            print("Debugg")
+            print("Debug")
             print("Job Titles:", job_titles)
             print("Locations:", locations)
             print("Industries:", industries)
@@ -666,8 +666,7 @@ def login_to_apollo(workemail, password):
         job_title_input = WebDriverWait(driver, 10).until(
             EC.presence_of_element_located((By.CSS_SELECTOR, "input.Select-input"))
         )
-        test_jobtitle = "Software Engineer"   # The data input is HERE
-        job_title_input.send_keys(test_jobtitle)
+        job_title_input.send_keys(job_titles)
         job_title_input.send_keys(Keys.RETURN)
 
         job_titles_element = WebDriverWait(driver, 10).until(
@@ -687,8 +686,7 @@ def login_to_apollo(workemail, password):
         input_element = WebDriverWait(driver, 10).until(
             EC.presence_of_element_located((By.CLASS_NAME, "Select-input"))
         )
-        location_text = "Selangor"
-        input_element.send_keys(location_text)
+        input_element.send_keys(locations)
         input_element.send_keys(Keys.RETURN)
         location_element = WebDriverWait(driver,10).until(
             EC.element_to_be_clickable((By.XPATH, "//span[text()='Location']"))
@@ -696,26 +694,22 @@ def login_to_apollo(workemail, password):
         location_element.click()
 
         #Industry & Keywords
-        industry_keywords_element = WebDriverWait(driver, 10).until(
-            EC.element_to_be_clickable((By.XPATH, "//span[text()='Industry & Keywords']"))
+        industry_element = WebDriverWait(driver,10).until(
+            EC.visibility_of_element_located((By.XPATH, "//*[@id='main-app']/div[2]/div/div[2]/div/div/div/div[2]/div[2]/div[2]/div[1]/div/div/div[2]/div[9]/div/span/div[1]/span"))
         )
-        industry_keywords_element.click()
-        placeholder_element = WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.XPATH, "//div[contains(@class, 'Select-placeholder') and text()='Search industries...']"))
+        driver.execute_script("arguments[0].scrollIntoView(true);", industry_element)
+        industry_element.click()
+        input_field = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, ".zp-select-main .Select-input"))
         )
-        driver.execute_script("arguments[0].scrollIntoView(true);", placeholder_element)
-        placeholder_element.click()  # Click the placeholder to focus the input field
-        input_element = WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.XPATH, "//input[contains(@class, 'Select-input')]"))
+        driver.execute_script("arguments[0].click();", input_field)
+        input_field.send_keys(industries)
+        input_field.send_keys(Keys.RETURN)
+        industry_element = WebDriverWait(driver,10).until(
+            EC.visibility_of_element_located((By.XPATH, "//*[@id='main-app']/div[2]/div/div[2]/div/div/div/div[2]/div[2]/div[2]/div[1]/div/div/div[2]/div[9]/div/span/div[1]/span"))
         )
-        industry_text = "Electronics"
-        input_element.send_keys(industry_text)
-        input_element.send_keys(Keys.RETURN)
-        industry_keywords_element = WebDriverWait(driver, 10).until(
-            EC.element_to_be_clickable((By.XPATH, "//span[text()='Industry & Keywords']"))
-        )
-        industry_keywords_element.click()
-
+        driver.execute_script("arguments[0].scrollIntoView(true);", industry_element)
+        industry_element.click()
         # This is to hide the filter 
         hide_filters_element = WebDriverWait(driver, 10).until(
             EC.element_to_be_clickable((By.XPATH, "//span[@class='zp_tZMYK' and text()='Hide Filters']"))
