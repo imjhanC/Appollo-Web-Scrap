@@ -824,8 +824,13 @@ def apollo_login():
     eye_button_ssm.bind("<ButtonPress-1>", lambda event: show_password(event, ssm_password))  # Show password
     eye_button_ssm.bind("<ButtonRelease-1>", lambda event: hide_password(event, ssm_password))  # Hide password
     
+    ttk.Label(frm, text="Enter number of leads you want to search", font=bold_font).grid(column=0, row=9, columnspan=2, pady=(0,0), sticky="w")
+    ttk.Label(frm, text="Number of lead(s):").grid(column=0,row=10, sticky="w", padx=10 ,pady=5)
+    global num_leads
+    num_leads = ttk.Entry(frm, width=50)
+    num_leads.grid(column=1,row=10, padx=10, pady=(0,0), sticky="w")
     # Login button
-    ttk.Button(frm, text="Login", command=lambda: on_submit(root_apollo)).grid(column=0, row=9, columnspan=3, pady=20)
+    ttk.Button(frm, text="Login", command=lambda: on_submit(root_apollo)).grid(column=0, row=11, columnspan=3, pady=20)
 
     root_apollo.mainloop()
 
