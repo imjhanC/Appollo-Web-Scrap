@@ -14,9 +14,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.common.exceptions import TimeoutException, NoSuchElementException , StaleElementReferenceException
-from selenium.common.exceptions import ElementNotInteractableException, StaleElementReferenceException, WebDriverException, ElementClickInterceptedException
 from tkinter import Tk, Text, Button, BOTH, LEFT, RIGHT, Y, END, VERTICAL, HORIZONTAL
-from selenium.webdriver.support.expected_conditions import staleness_of
 
 # This is the class for display how many seconds left for the user to enter the 2FA code via authenticator (multithreading)
 class TwoFactorCountdown:
@@ -680,7 +678,6 @@ def login_to_apollo(workemail, password):
         location_element = WebDriverWait(driver,10).until(
             EC.element_to_be_clickable((By.XPATH, "//span[text()='Location']"))
         )
-        driver.execute_script("arguments[0].scrollIntoView(true);",location_element)
         location_element.click()
         placeholder_element = WebDriverWait(driver, 10).until(
             EC.element_to_be_clickable((By.CLASS_NAME, "Select-placeholder"))
@@ -697,44 +694,75 @@ def login_to_apollo(workemail, password):
         location_element.click()
 
         #Industry & Keywords
-        industry_keywords_element = WebDriverWait(driver, 10).until(
-            EC.element_to_be_clickable((By.XPATH, "//span[text()='Industry & Keywords']"))
+        industry_element = WebDriverWait(driver,10).until(
+            EC.visibility_of_element_located((By.XPATH, "//*[@id='main-app']/div[2]/div/div[2]/div/div/div/div[2]/div[2]/div[2]/div[1]/div/div/div[2]/div[9]/div/span/div[1]/span"))
         )
-        driver.execute_script("arguments[0].scrollIntoView(true);",industry_keywords_element)
-        industry_keywords_element.click()
-        max_attempt = 2
-        placeholder_xpath = "/html/body/div[1]/div/div[2]/div[2]/div/div[2]/div/div[2]/div/div/div/div[2]/div[2]/div[2]/div[1]/div/div/div[2]/div[9]/div[2]/div/div[1]/div/div[1]/div/div/div/div/div/div/div[1]/div"
-        input_xpath = "/html/body/div[1]/div/div[2]/div[2]/div/div[2]/div/div[2]/div/div/div/div[2]/div[2]/div[2]/div[1]/div/div/div[2]/div[9]/div[2]/div/div[1]/div/div[1]/div/div/div/div/div/div/div[1]/input"
-        try:
-            placeholder = driver.find_element(By.CLASS_NAME, "Select-placeholder")
-            placeholder.click()
-
-            # Wait until the element is stale
-            WebDriverWait(driver, 10).until(staleness_of(placeholder))
-
-            # Re-locate the input element after DOM updates
-            input_field = WebDriverWait(driver, 10).until(
-                EC.presence_of_element_located((By.CLASS_NAME, "Select-input"))
-            )
-            input_field.send_keys(industries)
-            input_field.send_keys(Keys.ENTER)
-        except Exception as e:
-            print(f"An error occurred: {e}")
-
-        # Click "Industry & Keywords" to close or collapse the section
-        industry_keywords_element = WebDriverWait(driver, 10).until(
-            EC.element_to_be_clickable((By.XPATH, "//span[text()='Industry & Keywords']"))
+        driver.execute_script("arguments[0].scrollIntoView(true);", industry_element)
+        driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", industry_element)
+        
+        # Add a small pause to let any animations complete
+        driver.implicitly_wait(2)
+        
+        # Try multiple times to click
+        for attempt in range(3):
+            try:
+                # Try clicking using different methods
+                industry_element.click()
+                break
+            except StaleElementReferenceException:
+                # Re-locate the element if it becomes stale
+                industry_element = WebDriverWait(driver, 10).until(
+                    EC.element_to_be_clickable((By.XPATH, "//*[@id='main-app']/div[2]/div/div[2]/div/div/div/div[2]/div[2]/div[2]/div[1]/div/div/div[2]/div[9]/div/span/div[1]/span"))
+                )
+        
+        # Wait for search box and click it
+        search_box = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.CSS_SELECTOR, '.Select-placeholder'))
         )
-        industry_keywords_element.click()
+        search_box.click()
+        
+        # Find input field and enter text
+        input_field = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, '.Select-input input'))
+        )
+        
+        # Clear any existing text first
+        input_field.clear()
+        
+        # Send keys slowly
+        for char in industries:
+            input_field.send_keys(char)
+            driver.implicitly_wait(0.1)  # Small pause between characters
+        
+        # Press return to select
+        input_field.send_keys(Keys.RETURN)
+        industry_element = WebDriverWait(driver,10).until(
+            EC.visibility_of_element_located((By.XPATH, "//*[@id='main-app']/div[2]/div/div[2]/div/div/div/div[2]/div[2]/div[2]/div[1]/div/div/div[2]/div[9]/div/span/div[1]/span"))
+        )
+        driver.execute_script("arguments[0].scrollIntoView(true);", industry_element)
+        industry_element.click()
+        # This is to hide the filter 
+        hide_filters_element = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.XPATH, "//span[@class='zp_tZMYK' and text()='Hide Filters']"))
+        )
+        hide_filters_element.click()
 
+        STATUS_LOOKUP = {
+            'm12.5 1.994 1.081 2.191L16 4.537l-1.75 1.705.413 2.408L12.5 7.513 10.336 8.65l.414-2.408L9 4.537l2.418-.352 1.081-2.19Z': "verified star",
+            'M15.196 3.04a.8.8 0 0 1 .17 1.12L12.9 7.517a1.067 1.067 0 0 1-1.67.062L9.672 5.761a.8.8 0 1 1 1.215-1.04l1.121 1.308 2.07-2.817a.8.8 0 0 1 1.119-.171Z': "verified tick",
+            'M14.216 2.653a.8.8 0 1 1 1.131 1.131L13.631 5.5l1.716 1.716a.8.8 0 0 1-1.131 1.131L12.5 6.631l-1.716 1.716a.8.8 0 0 1-1.131-1.131L11.369 5.5 9.653 3.784a.8.8 0 0 1 1.131-1.131L12.5 4.369l1.716-1.716Z': "not available",
+            'M 11.8 3.9 c 0.1 -0.3 0.4 -0.5 0.7 -0.4 c 0.3 0.1 0.5 0.3 0.5 0.6 c 0 0.2 -0.2 0.5 -0.5 0.6 c -0.4 0.1 -0.9 0.5 -0.9 1 v 0.5 C 11.7 6.6 12.1 7 12.5 7 C 12.9 7 13.3 6.6 13.3 6.2 v -0.1 c 0.8 -0.3 1.4 -1.1 1.4 -2 v 0 c 0 -1.3 -0.9 -2 -1.9 -2.2 c -0.9 -0.1 -2.1 0.3 -2.5 1.5 C 10.2 3.8 10.4 4.2 10.8 4.4 C 11.2 4.5 11.7 4.3 11.8 3.9 Z': "question"
+        }
+
+        target_div = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.CLASS_NAME, "zp_tFLCQ"))
+        )
+        print("Row data:")
+        print(target_div.text)  # Print the entire div text
         time.sleep(1250) 
 
-    except (ElementNotInteractableException, StaleElementReferenceException, WebDriverException) as e:
-        # Print out the specific locator of the element that caused the issue
-        import traceback
-        print("Error occurred during interaction with the page.")
-        print("Error details:", str(e))
-        print("Traceback:", traceback.format_exc())
+    except Exception as e:
+        print(f"Error in login to Apollo part 1: {str(e)}")
         return None
     return driver  # Return the driver object to interact further if necessary
     

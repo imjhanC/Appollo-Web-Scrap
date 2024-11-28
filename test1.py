@@ -14,9 +14,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.common.exceptions import TimeoutException, NoSuchElementException , StaleElementReferenceException
-from selenium.common.exceptions import ElementNotInteractableException, StaleElementReferenceException, WebDriverException, ElementClickInterceptedException
 from tkinter import Tk, Text, Button, BOTH, LEFT, RIGHT, Y, END, VERTICAL, HORIZONTAL
-from selenium.webdriver.support.expected_conditions import staleness_of
 
 # This is the class for display how many seconds left for the user to enter the 2FA code via authenticator (multithreading)
 class TwoFactorCountdown:
@@ -594,7 +592,7 @@ def select_details_gui():
     root.destroy()
 
     return result
-    
+
 # This is the logic for interacting inside the apollo.io
 def login_to_apollo(workemail, password):
     driver = None
@@ -646,7 +644,7 @@ def login_to_apollo(workemail, password):
         received_text = select_details_gui()
         if received_text is not None:
             job_titles, locations, industries = received_text
-            print("Debug")
+            print("Debugg")
             print("Job Titles:", job_titles)
             print("Locations:", locations)
             print("Industries:", industries)
@@ -668,7 +666,8 @@ def login_to_apollo(workemail, password):
         job_title_input = WebDriverWait(driver, 10).until(
             EC.presence_of_element_located((By.CSS_SELECTOR, "input.Select-input"))
         )
-        job_title_input.send_keys(job_titles)
+        test_jobtitle = "Software Engineer"   # The data input is HERE
+        job_title_input.send_keys(test_jobtitle)
         job_title_input.send_keys(Keys.RETURN)
 
         job_titles_element = WebDriverWait(driver, 10).until(
@@ -680,7 +679,6 @@ def login_to_apollo(workemail, password):
         location_element = WebDriverWait(driver,10).until(
             EC.element_to_be_clickable((By.XPATH, "//span[text()='Location']"))
         )
-        driver.execute_script("arguments[0].scrollIntoView(true);",location_element)
         location_element.click()
         placeholder_element = WebDriverWait(driver, 10).until(
             EC.element_to_be_clickable((By.CLASS_NAME, "Select-placeholder"))
@@ -689,7 +687,8 @@ def login_to_apollo(workemail, password):
         input_element = WebDriverWait(driver, 10).until(
             EC.presence_of_element_located((By.CLASS_NAME, "Select-input"))
         )
-        input_element.send_keys(locations)
+        location_text = "Selangor"
+        input_element.send_keys(location_text)
         input_element.send_keys(Keys.RETURN)
         location_element = WebDriverWait(driver,10).until(
             EC.element_to_be_clickable((By.XPATH, "//span[text()='Location']"))
@@ -700,41 +699,34 @@ def login_to_apollo(workemail, password):
         industry_keywords_element = WebDriverWait(driver, 10).until(
             EC.element_to_be_clickable((By.XPATH, "//span[text()='Industry & Keywords']"))
         )
-        driver.execute_script("arguments[0].scrollIntoView(true);",industry_keywords_element)
         industry_keywords_element.click()
-        max_attempt = 2
-        placeholder_xpath = "/html/body/div[1]/div/div[2]/div[2]/div/div[2]/div/div[2]/div/div/div/div[2]/div[2]/div[2]/div[1]/div/div/div[2]/div[9]/div[2]/div/div[1]/div/div[1]/div/div/div/div/div/div/div[1]/div"
-        input_xpath = "/html/body/div[1]/div/div[2]/div[2]/div/div[2]/div/div[2]/div/div/div/div[2]/div[2]/div[2]/div[1]/div/div/div[2]/div[9]/div[2]/div/div[1]/div/div[1]/div/div/div/div/div/div/div[1]/input"
-        try:
-            placeholder = driver.find_element(By.CLASS_NAME, "Select-placeholder")
-            placeholder.click()
-
-            # Wait until the element is stale
-            WebDriverWait(driver, 10).until(staleness_of(placeholder))
-
-            # Re-locate the input element after DOM updates
-            input_field = WebDriverWait(driver, 10).until(
-                EC.presence_of_element_located((By.CLASS_NAME, "Select-input"))
-            )
-            input_field.send_keys(industries)
-            input_field.send_keys(Keys.ENTER)
-        except Exception as e:
-            print(f"An error occurred: {e}")
-
-        # Click "Industry & Keywords" to close or collapse the section
+        driver.execute_script("arguments[0].scrollIntoView(true);", industry_keywords_element)
+        placeholder_element = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.XPATH, "//div[contains(@class, 'Select-placeholder') and text()='Search industries...']"))
+        )
+        driver.execute_script("arguments[0].scrollIntoView(true);", placeholder_element)
+        placeholder_element.click()  # Click the placeholder to focus the input field
+        input_element = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.XPATH, "//input[contains(@class, 'Select-input')]"))
+        )
+        industry_text = "Electronics"
+        input_element.send_keys(industry_text)
+        input_element.send_keys(Keys.RETURN)
         industry_keywords_element = WebDriverWait(driver, 10).until(
             EC.element_to_be_clickable((By.XPATH, "//span[text()='Industry & Keywords']"))
         )
         industry_keywords_element.click()
 
+        # This is to hide the filter 
+        hide_filters_element = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.XPATH, "//span[@class='zp_tZMYK' and text()='Hide Filters']"))
+        )
+        hide_filters_element.click()
+
         time.sleep(1250) 
 
-    except (ElementNotInteractableException, StaleElementReferenceException, WebDriverException) as e:
-        # Print out the specific locator of the element that caused the issue
-        import traceback
-        print("Error occurred during interaction with the page.")
-        print("Error details:", str(e))
-        print("Traceback:", traceback.format_exc())
+    except Exception as e:
+        print(f"Error in login to Apollo part 1: {str(e)}")
         return None
     return driver  # Return the driver object to interact further if necessary
     
@@ -839,13 +831,8 @@ def apollo_login():
     eye_button_ssm.bind("<ButtonPress-1>", lambda event: show_password(event, ssm_password))  # Show password
     eye_button_ssm.bind("<ButtonRelease-1>", lambda event: hide_password(event, ssm_password))  # Hide password
     
-    ttk.Label(frm, text="Enter number of leads you want to search", font=bold_font).grid(column=0, row=9, columnspan=2, pady=(0,0), sticky="w")
-    ttk.Label(frm, text="Number of lead(s):").grid(column=0,row=10, sticky="w", padx=10 ,pady=5)
-    global num_leads
-    num_leads = ttk.Entry(frm, width=50)
-    num_leads.grid(column=1,row=10, padx=10, pady=(0,0), sticky="w")
     # Login button
-    ttk.Button(frm, text="Login", command=lambda: on_submit(root_apollo)).grid(column=0, row=11, columnspan=3, pady=20)
+    ttk.Button(frm, text="Login", command=lambda: on_submit(root_apollo)).grid(column=0, row=9, columnspan=3, pady=20)
 
     root_apollo.mainloop()
 
