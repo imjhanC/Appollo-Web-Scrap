@@ -652,11 +652,35 @@ def login_to_apollo(workemail, password):
             # Continue with the rest of the Apollo.io interaction
         else:
             print("No details selected or user cancelled.")
-        
+
+        # Industry & Keywords
+        industry_element = WebDriverWait(driver,10).until(
+            EC.visibility_of_element_located((By.XPATH, "//*[@id='main-app']/div[2]/div/div[2]/div/div/div/div[2]/div[2]/div[2]/div[1]/div/div/div[2]/div[9]/div/span/div[1]/span"))
+        )
+        driver.execute_script("arguments[0].scrollIntoView(true);", industry_element)
+        industry_element.click()
+        placeholder_element_industries = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.CLASS_NAME, "Select-placeholder"))
+        )
+        placeholder_element_industries.click()
+        time.sleep(3)
+        input_element_industries = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.CLASS_NAME, "Select-input"))
+        )
+        input_element_industries.send_keys(industries)
+        time.sleep(2)
+        input_element_industries.send_keys(Keys.ENTER)
+        industry_element = WebDriverWait(driver,10).until(
+            EC.visibility_of_element_located((By.XPATH, "//*[@id='main-app']/div[2]/div/div[2]/div/div/div/div[2]/div[2]/div[2]/div[1]/div/div/div[2]/div[9]/div/span/div[1]/span"))
+        )
+        driver.execute_script("arguments[0].scrollIntoView(true);", industry_element)
+        industry_element.click()
+
         # Job title Input
         job_titles_element = WebDriverWait(driver, 10).until(
             EC.element_to_be_clickable((By.XPATH, "//span[text()='Job Titles']"))
         )
+        driver.execute_script("arguments[0].scrollIntoView(true);", job_titles_element)
         job_titles_element.click()
 
         placeholder_element = WebDriverWait(driver, 10).until(
@@ -679,6 +703,7 @@ def login_to_apollo(workemail, password):
             EC.element_to_be_clickable((By.XPATH, "//span[text()='Location']"))
         )
         location_element.click()
+        time.sleep(3)
         placeholder_element = WebDriverWait(driver, 10).until(
             EC.element_to_be_clickable((By.CLASS_NAME, "Select-placeholder"))
         )
@@ -687,78 +712,35 @@ def login_to_apollo(workemail, password):
             EC.presence_of_element_located((By.CLASS_NAME, "Select-input"))
         )
         input_element.send_keys(locations)
+        time.sleep(2)
         input_element.send_keys(Keys.RETURN)
         location_element = WebDriverWait(driver,10).until(
             EC.element_to_be_clickable((By.XPATH, "//span[text()='Location']"))
         )
         location_element.click()
 
-        #Industry & Keywords
-        industry_element = WebDriverWait(driver,10).until(
-            EC.visibility_of_element_located((By.XPATH, "//*[@id='main-app']/div[2]/div/div[2]/div/div/div/div[2]/div[2]/div[2]/div[1]/div/div/div[2]/div[9]/div/span/div[1]/span"))
-        )
-        driver.execute_script("arguments[0].scrollIntoView(true);", industry_element)
-        driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", industry_element)
-        
-        # Add a small pause to let any animations complete
-        driver.implicitly_wait(2)
-        
-        # Try multiple times to click
-        for attempt in range(3):
-            try:
-                # Try clicking using different methods
-                industry_element.click()
-                break
-            except StaleElementReferenceException:
-                # Re-locate the element if it becomes stale
-                industry_element = WebDriverWait(driver, 10).until(
-                    EC.element_to_be_clickable((By.XPATH, "//*[@id='main-app']/div[2]/div/div[2]/div/div/div/div[2]/div[2]/div[2]/div[1]/div/div/div[2]/div[9]/div/span/div[1]/span"))
-                )
-        
-        # Wait for search box and click it
-        search_box = WebDriverWait(driver, 10).until(
-            EC.element_to_be_clickable((By.CSS_SELECTOR, '.Select-placeholder'))
-        )
-        search_box.click()
-        
-        # Find input field and enter text
-        input_field = WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.CSS_SELECTOR, '.Select-input input'))
-        )
-        
-        # Clear any existing text first
-        input_field.clear()
-        
-        # Send keys slowly
-        for char in industries:
-            input_field.send_keys(char)
-            driver.implicitly_wait(0.1)  # Small pause between characters
-        
-        # Press return to select
-        input_field.send_keys(Keys.RETURN)
-        industry_element = WebDriverWait(driver,10).until(
-            EC.visibility_of_element_located((By.XPATH, "//*[@id='main-app']/div[2]/div/div[2]/div/div/div/div[2]/div[2]/div[2]/div[1]/div/div/div[2]/div[9]/div/span/div[1]/span"))
-        )
-        driver.execute_script("arguments[0].scrollIntoView(true);", industry_element)
-        industry_element.click()
         # This is to hide the filter 
         hide_filters_element = WebDriverWait(driver, 10).until(
             EC.element_to_be_clickable((By.XPATH, "//span[@class='zp_tZMYK' and text()='Hide Filters']"))
         )
         hide_filters_element.click()
 
-        STATUS_LOOKUP = {
-            'm12.5 1.994 1.081 2.191L16 4.537l-1.75 1.705.413 2.408L12.5 7.513 10.336 8.65l.414-2.408L9 4.537l2.418-.352 1.081-2.19Z': "verified star",
-            'M15.196 3.04a.8.8 0 0 1 .17 1.12L12.9 7.517a1.067 1.067 0 0 1-1.67.062L9.672 5.761a.8.8 0 1 1 1.215-1.04l1.121 1.308 2.07-2.817a.8.8 0 0 1 1.119-.171Z': "verified tick",
-            'M14.216 2.653a.8.8 0 1 1 1.131 1.131L13.631 5.5l1.716 1.716a.8.8 0 0 1-1.131 1.131L12.5 6.631l-1.716 1.716a.8.8 0 0 1-1.131-1.131L11.369 5.5 9.653 3.784a.8.8 0 0 1 1.131-1.131L12.5 4.369l1.716-1.716Z': "not available",
-            'M 11.8 3.9 c 0.1 -0.3 0.4 -0.5 0.7 -0.4 c 0.3 0.1 0.5 0.3 0.5 0.6 c 0 0.2 -0.2 0.5 -0.5 0.6 c -0.4 0.1 -0.9 0.5 -0.9 1 v 0.5 C 11.7 6.6 12.1 7 12.5 7 C 12.9 7 13.3 6.6 13.3 6.2 v -0.1 c 0.8 -0.3 1.4 -1.1 1.4 -2 v 0 c 0 -1.3 -0.9 -2 -1.9 -2.2 c -0.9 -0.1 -2.1 0.3 -2.5 1.5 C 10.2 3.8 10.4 4.2 10.8 4.4 C 11.2 4.5 11.7 4.3 11.8 3.9 Z': "question"
-        }
-
-        target_div = WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.CLASS_NAME, "zp_tFLCQ"))
-        )
-        print("Row data:")
-        print(target_div.text)  # Print the entire div text
+            
+        #  Working code for reading all the row that is currently in one page 
+        #target_div = WebDriverWait(driver, 10).until(
+        #    EC.presence_of_element_located((By.CLASS_NAME, "zp_tFLCQ"))
+        #)
+        # Locate all rows within the container
+        #rows = target_div.find_elements(By.XPATH, "./div")  # Adjust the XPath as needed
+        
+        #print("Row data:")
+        #for row in rows:
+        #    # Locate all columns within the current row
+        #    columns = row.find_elements(By.XPATH, "./*")
+        #    
+        #    # Extract text from each column and join with commas
+        #    row_data = [column.text for column in columns]
+        #    print(", ".join(row_data))  # Print row data separated by commas
         time.sleep(1250) 
 
     except Exception as e:

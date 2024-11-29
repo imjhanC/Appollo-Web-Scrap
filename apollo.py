@@ -690,6 +690,7 @@ def login_to_apollo(workemail, password):
             EC.presence_of_element_located((By.CLASS_NAME, "Select-input"))
         )
         input_element.send_keys(locations)
+        time.sleep(2)
         input_element.send_keys(Keys.RETURN)
         location_element = WebDriverWait(driver,10).until(
             EC.element_to_be_clickable((By.XPATH, "//span[text()='Location']"))
@@ -702,32 +703,49 @@ def login_to_apollo(workemail, password):
         )
         driver.execute_script("arguments[0].scrollIntoView(true);",industry_keywords_element)
         industry_keywords_element.click()
-        max_attempt = 2
-        placeholder_xpath = "/html/body/div[1]/div/div[2]/div[2]/div/div[2]/div/div[2]/div/div/div/div[2]/div[2]/div[2]/div[1]/div/div/div[2]/div[9]/div[2]/div/div[1]/div/div[1]/div/div/div/div/div/div/div[1]/div"
-        input_xpath = "/html/body/div[1]/div/div[2]/div[2]/div/div[2]/div/div[2]/div/div/div/div[2]/div[2]/div[2]/div[1]/div/div/div[2]/div[9]/div[2]/div/div[1]/div/div[1]/div/div/div/div/div/div/div[1]/input"
-        try:
-            placeholder = driver.find_element(By.CLASS_NAME, "Select-placeholder")
-            placeholder.click()
+        timeout =10
+        placeholder_xpath = "//*[@id='main-app']/div[2]/div/div[2]/div/div/div/div[2]/div[2]/div[2]/div[1]/div/div/div[2]/div[9]/div[2]/div/div[1]/div/div[1]/div/div/div/div/div/div/div[1]/div"
+        input_xpath = "//*[@id='main-app']/div[2]/div/div[2]/div/div/div/div[2]/div[2]/div[2]/div[1]/div/div/div[2]/div[9]/div[2]/div/div[1]/div/div[1]/div/div/div/div/div/div/div[1]/input"
+        WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.XPATH, placeholder_xpath))
+        ).click()
 
-            # Wait until the element is stale
-            WebDriverWait(driver, 10).until(staleness_of(placeholder))
-
-            # Re-locate the input element after DOM updates
-            input_field = WebDriverWait(driver, 10).until(
-                EC.presence_of_element_located((By.CLASS_NAME, "Select-input"))
-            )
-            input_field.send_keys(industries)
-            input_field.send_keys(Keys.ENTER)
-        except Exception as e:
-            print(f"An error occurred: {e}")
-
-        # Click "Industry & Keywords" to close or collapse the section
-        industry_keywords_element = WebDriverWait(driver, 10).until(
-            EC.element_to_be_clickable((By.XPATH, "//span[text()='Industry & Keywords']"))
+        # Immediately find and interact with the input element
+        input_element_industry = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.XPATH,input_xpath))
         )
-        industry_keywords_element.click()
+        
+        if isinstance(industries, list):
+            industries_str = ', '.join(industries)
+        else:
+            industries_str = industries
+        industries_str = industries_str.replace("'", "\\'")
 
-        time.sleep(1250) 
+        # Wait for the input element and inject value
+        input_element_industry = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.XPATH, input_xpath))
+        )
+        value = "Industries: ['Automotive']"
+        automotive_value = value.split("['")[1].split("']")[0]  # Extract "Automotive"
+        element_class = "Select-input"
+
+        script = f"""
+            var element = document.querySelector('.{element_class}');
+            if (element) {{
+                element.value = '{automotive_value}';
+                var event = new Event('input', {{ bubbles: true }});
+                element.dispatchEvent(event);
+            }}
+        """
+
+        driver.execute_script(script)
+
+        # Optional: verify the new value in Selenium
+        modified_value = driver.execute_script("return document.querySelector('.Select-input').value;")
+        print("Modified Value:", modified_value)
+        # Optional: Press Enter if needed
+        input_element_industry.send_keys(Keys.RETURN)
+        time.sleep(5)
 
     except (ElementNotInteractableException, StaleElementReferenceException, WebDriverException) as e:
         # Print out the specific locator of the element that caused the issue
