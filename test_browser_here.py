@@ -725,22 +725,34 @@ def login_to_apollo(workemail, password):
         )
         hide_filters_element.click()
 
-            
-        #  Working code for reading all the row that is currently in one page 
-        #target_div = WebDriverWait(driver, 10).until(
-        #    EC.presence_of_element_located((By.CLASS_NAME, "zp_tFLCQ"))
-        #)
+        target_div = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.CLASS_NAME, "zp_tFLCQ"))
+        )
+
         # Locate all rows within the container
-        #rows = target_div.find_elements(By.XPATH, "./div")  # Adjust the XPath as needed
-        
-        #print("Row data:")
-        #for row in rows:
-        #    # Locate all columns within the current row
-        #    columns = row.find_elements(By.XPATH, "./*")
-        #    
-        #    # Extract text from each column and join with commas
-        #    row_data = [column.text for column in columns]
-        #    print(", ".join(row_data))  # Print row data separated by commas
+        rows = target_div.find_elements(By.XPATH, "./div")  # Adjust the XPath as needed
+
+        print("Row data:")
+        for row in rows:
+            # Locate all columns within the current row
+            columns = row.find_elements(By.XPATH, "./*")
+            
+            # Extract text from each column, modifying the 4th column as needed
+            row_data = []
+            for index, column in enumerate(columns):
+                text = column.text
+                
+                # Modify the 4th column text
+                if index == 3:  # Assuming 0-based index, 4th column is index 3
+                    if text == "Access email":
+                        text = "Click Me"
+                    elif text == "Save contact":
+                        text = "Don't click me"
+                
+                row_data.append(text)
+            
+            # Print the row data separated by commas
+            print(", ".join(row_data))
         time.sleep(1250) 
 
     except Exception as e:

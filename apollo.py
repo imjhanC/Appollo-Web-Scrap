@@ -5,9 +5,12 @@ import sys
 import os
 import threading
 import time 
+import pickle
 from PIL import Image, ImageTk 
 import tkinter.font as tkfont
 import undetected_chromedriver as uc
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
@@ -596,12 +599,13 @@ def select_details_gui():
     return result
     
 # This is the logic for interacting inside the apollo.io
-def login_to_apollo(workemail, password):
+def login_to_apollo(workemail, password, linkedin_email, linkedin_pass, num_leads):
     driver = None
     countdown = None 
     try:
         options = uc.ChromeOptions()
-        options.add_argument('--start-minimized')
+        options.add_argument("--start-minimized")  # Or remove if testing in non-headless mode
+        options.add_argument("--disable-blink-features=AutomationControlled")
 
         print("Initializing Chrome...")
         driver = uc.Chrome(options=options)
@@ -654,11 +658,35 @@ def login_to_apollo(workemail, password):
             # Continue with the rest of the Apollo.io interaction
         else:
             print("No details selected or user cancelled.")
-        
+
+        # Industry & Keywords
+        industry_element = WebDriverWait(driver,10).until(
+            EC.visibility_of_element_located((By.XPATH, "//*[@id='main-app']/div[2]/div/div[2]/div/div/div/div[2]/div[2]/div[2]/div[1]/div/div/div[2]/div[9]/div/span/div[1]/span"))
+        )
+        driver.execute_script("arguments[0].scrollIntoView(true);", industry_element)
+        industry_element.click()
+        placeholder_element_industries = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.CLASS_NAME, "Select-placeholder"))
+        )
+        placeholder_element_industries.click()
+        time.sleep(3)
+        input_element_industries = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.CLASS_NAME, "Select-input"))
+        )
+        input_element_industries.send_keys(industries)
+        time.sleep(2)
+        input_element_industries.send_keys(Keys.ENTER)
+        industry_element = WebDriverWait(driver,10).until(
+            EC.visibility_of_element_located((By.XPATH, "//*[@id='main-app']/div[2]/div/div[2]/div/div/div/div[2]/div[2]/div[2]/div[1]/div/div/div[2]/div[9]/div/span/div[1]/span"))
+        )
+        driver.execute_script("arguments[0].scrollIntoView(true);", industry_element)
+        industry_element.click()
+
         # Job title Input
         job_titles_element = WebDriverWait(driver, 10).until(
             EC.element_to_be_clickable((By.XPATH, "//span[text()='Job Titles']"))
         )
+        driver.execute_script("arguments[0].scrollIntoView(true);", job_titles_element)
         job_titles_element.click()
 
         placeholder_element = WebDriverWait(driver, 10).until(
@@ -680,8 +708,8 @@ def login_to_apollo(workemail, password):
         location_element = WebDriverWait(driver,10).until(
             EC.element_to_be_clickable((By.XPATH, "//span[text()='Location']"))
         )
-        driver.execute_script("arguments[0].scrollIntoView(true);",location_element)
         location_element.click()
+        time.sleep(3)
         placeholder_element = WebDriverWait(driver, 10).until(
             EC.element_to_be_clickable((By.CLASS_NAME, "Select-placeholder"))
         )
@@ -697,74 +725,104 @@ def login_to_apollo(workemail, password):
         )
         location_element.click()
 
-        #Industry & Keywords
-        industry_keywords_element = WebDriverWait(driver, 10).until(
-            EC.element_to_be_clickable((By.XPATH, "//span[text()='Industry & Keywords']"))
+        # This is to hide the filter 
+        hide_filters_element = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.XPATH, "//span[@class='zp_tZMYK' and text()='Hide Filters']"))
         )
-        driver.execute_script("arguments[0].scrollIntoView(true);",industry_keywords_element)
-        industry_keywords_element.click()
-        timeout =10
-        placeholder_xpath = "//*[@id='main-app']/div[2]/div/div[2]/div/div/div/div[2]/div[2]/div[2]/div[1]/div/div/div[2]/div[9]/div[2]/div/div[1]/div/div[1]/div/div/div/div/div/div/div[1]/div"
-        input_xpath = "//*[@id='main-app']/div[2]/div/div[2]/div/div/div/div[2]/div[2]/div[2]/div[1]/div/div/div[2]/div[9]/div[2]/div/div[1]/div/div[1]/div/div/div/div/div/div/div[1]/input"
-        WebDriverWait(driver, 10).until(
-            EC.element_to_be_clickable((By.XPATH, placeholder_xpath))
-        ).click()
-
-        # Immediately find and interact with the input element
-        input_element_industry = WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.XPATH,input_xpath))
+        hide_filters_element.click()
+        login_to_linkedin(driver, str(linkedin_email), str(linkedin_pass))
+        target_div = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.CLASS_NAME, "zp_tFLCQ"))
         )
-        
-        if isinstance(industries, list):
-            industries_str = ', '.join(industries)
-        else:
-            industries_str = industries
-        industries_str = industries_str.replace("'", "\\'")
 
-        # Wait for the input element and inject value
-        input_element_industry = WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.XPATH, input_xpath))
-        )
-        value = "Industries: ['Automotive']"
-        automotive_value = value.split("['")[1].split("']")[0]  # Extract "Automotive"
-        element_class = "Select-input"
+        # Locate all rows within the container
+        rows = target_div.find_elements(By.XPATH, "./div")  # Adjust the XPath as needed
 
-        script = f"""
-            var element = document.querySelector('.{element_class}');
-            if (element) {{
-                element.value = '{automotive_value}';
-                var event = new Event('input', {{ bubbles: true }});
-                element.dispatchEvent(event);
-            }}
-        """
+        num_rows_leads = int(num_leads)
+        print(f"Number of leads to process: {num_rows_leads}")  # Use f-string for formatting
+        print("Row data:")
+        for row in rows[:num_rows_leads]:  # Limit to the first 'max_rows' rows
+            # Locate all columns within the current row
+            columns = row.find_elements(By.XPATH, "./*")
+            
+            # Extract text from each column, modifying the 4th column as needed
+            row_data = []
+            for index, column in enumerate(columns):
+                text = column.text
+                
+                # Modify the 4th column text
+                if index == 3:  # Assuming 0-based index, 4th column is index 3
+                    if text == "Access email":
+                        text = "Click Me"
+                    elif text == "Save contact":
+                        text = "Don't click me"
+                
+                row_data.append(text)
+            
+            # Print the row data separated by commas
+            print(", ".join(row_data))
 
-        driver.execute_script(script)
+    except Exception as e:
+        print(f"Error in login to Apollo part 1: {str(e)}")
+    finally:
+        time.sleep(1250)
+        #if driver:
+        #    driver.quit()
 
-        # Optional: verify the new value in Selenium
-        modified_value = driver.execute_script("return document.querySelector('.Select-input').value;")
-        print("Modified Value:", modified_value)
-        # Optional: Press Enter if needed
-        input_element_industry.send_keys(Keys.RETURN)
-        time.sleep(5)
+def login_to_linkedin(driver, linkedin_email, linkedin_pass):
+    current_window_handle = driver.current_window_handle
 
-    except (ElementNotInteractableException, StaleElementReferenceException, WebDriverException) as e:
-        # Print out the specific locator of the element that caused the issue
-        import traceback
-        print("Error occurred during interaction with the page.")
-        print("Error details:", str(e))
-        print("Traceback:", traceback.format_exc())
-        return None
-    return driver  # Return the driver object to interact further if necessary
+    # Open a new tab for LinkedIn login
+    driver.execute_script("window.open('');")
+    time.sleep(2)
+    driver.switch_to.window(driver.window_handles[-1])
+
+    # Navigate to LinkedIn login page
+    driver.get("https://www.linkedin.com/login")
+    print("Entering new tab:", driver.title)
+
+    # Wait for elements to load (can be adjusted with WebDriverWait if needed)
+    time.sleep(3)
+
+    # Locate and fill in the email input
+    username = driver.find_element(By.XPATH, "//input[@name='session_key']")
+    username.send_keys(linkedin_email)
+
+    # Locate and fill in the password input
+    password = driver.find_element(By.XPATH, "//input[@name='session_password']")
+    for char in linkedin_pass:
+        password.send_keys(char)
+
+    # Locate and click the login button
+    login_button = driver.find_element(By.XPATH, "//button[@type='submit']")
+    login_button.click()
+
+    # Print confirmation
+    print("Successfully logged into LinkedIn.")
+
+    # Wait for 2FA (20 seconds) if necessary
+    time.sleep(20)  # Adjust this time as needed for the 2FA step
+
+    # Switch back to the original tab
+    driver.switch_to.window(current_window_handle)
+    print("Switched back to the original tab.")
     
+    return driver
+
 def on_submit(root):
     work_email = workemail_entry.get()
     password = password_entry.get()
+    linkedin_email_entry = linkedin_email.get()
+    linkedin_password_entry = linkedin_password.get()
+    ssm_email_entry = ssm_email.get()
+    ssm_password_entry = ssm_password.get()
+    num =  num_leads.get() # Number of leads 
 
     if not work_email or not password:
         messagebox.showerror("Input error", "Please enter all fields !")
         return
     
-    threading.Thread(target=login_to_apollo, args=(work_email,password)).start()
+    threading.Thread(target=login_to_apollo, args=(work_email,password,linkedin_email_entry,linkedin_password_entry,num)).start()
     root.destroy()
 
 def apollo_login():
@@ -787,7 +845,7 @@ def apollo_login():
     x_position = (screen_width - window_width) // 2
     y_position = (screen_height - window_height) // 2 
     root_apollo.geometry(f"{window_width}x{window_height}+{x_position}+{y_position}")
-    root_apollo.resizable(True, True)
+    root_apollo.resizable(False, False)
 
     # Make the root window's grid expandable
     root_apollo.columnconfigure(0, weight=1)
@@ -865,7 +923,7 @@ def apollo_login():
     # Login button
     ttk.Button(frm, text="Login", command=lambda: on_submit(root_apollo)).grid(column=0, row=11, columnspan=3, pady=20)
 
-    root_apollo.mainloop()
+    root_apollo.mainloop() 
 
 if __name__ == "__main__":
     apollo_login()
