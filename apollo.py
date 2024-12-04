@@ -3,6 +3,7 @@ from tkinter import Toplevel, ttk
 from tkinter import messagebox
 import sys
 import os
+import re
 import threading
 import time 
 import pickle
@@ -599,7 +600,7 @@ def select_details_gui():
     return result
     
 # This is the logic for interacting inside the apollo.io
-def login_to_apollo(workemail, password, linkedin_email, linkedin_pass, num_leads):
+def login_to_apollo(workemail, password, vtiger_email, vtiger_pass, num_leads):
     driver = None
     countdown = None 
     try:
@@ -693,10 +694,13 @@ def login_to_apollo(workemail, password, linkedin_email, linkedin_pass, num_lead
             EC.element_to_be_clickable((By.CLASS_NAME, "Select-placeholder"))
         )
         placeholder_element.click()  # Click the placeholder
+        time.sleep(2)
         job_title_input = WebDriverWait(driver, 10).until(
             EC.presence_of_element_located((By.CSS_SELECTOR, "input.Select-input"))
         )
+        time.sleep(5)
         job_title_input.send_keys(job_titles)
+        time.sleep(1)
         job_title_input.send_keys(Keys.RETURN)
 
         job_titles_element = WebDriverWait(driver, 10).until(
@@ -730,37 +734,136 @@ def login_to_apollo(workemail, password, linkedin_email, linkedin_pass, num_lead
             EC.element_to_be_clickable((By.XPATH, "//span[@class='zp_tZMYK' and text()='Hide Filters']"))
         )
         hide_filters_element.click()
-        login_to_linkedin(driver, str(linkedin_email), str(linkedin_pass))
+
+        # Wait for the target container to be present
         target_div = WebDriverWait(driver, 10).until(
             EC.presence_of_element_located((By.CLASS_NAME, "zp_tFLCQ"))
         )
 
         # Locate all rows within the container
-        rows = target_div.find_elements(By.XPATH, "./div")  # Adjust the XPath as needed
+        rows = target_div.find_elements(By.XPATH, "./div")
 
+        email_regex = r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
         num_rows_leads = int(num_leads)
-        print(f"Number of leads to process: {num_rows_leads}")  # Use f-string for formatting
+        print(f"Number of leads to process: {num_rows_leads}")
         print("Row data:")
-        for row in rows[:num_rows_leads]:  # Limit to the first 'max_rows' rows
-            # Locate all columns within the current row
+
+# Load previously processed emails from tracking.txt
+        processed_emails = set()
+        try:
+            with open('tracking.txt', 'r') as f:
+                processed_emails = set(f.read().splitlines())
+            print(f"Loaded {len(processed_emails)} processed emails from tracking.txt")
+        except FileNotFoundError:
+            print("tracking.txt not found. Creating a new tracking file.")
+            open('tracking.txt', 'w').close()
+
+        # Determine the starting row index
+        start_row_index = 0
+        for start_row_index in range(num_rows_leads):
+            row = rows[start_row_index]
             columns = row.find_elements(By.XPATH, "./*")
             
-            # Extract text from each column, modifying the 4th column as needed
+            # Extract row data
             row_data = []
             for index, column in enumerate(columns):
                 text = column.text
                 
-                # Modify the 4th column text
-                if index == 3:  # Assuming 0-based index, 4th column is index 3
+                # Modify the 4th column text based on conditions
+                if index == 3:  # 0-based index, so the 4th column is index 3
                     if text == "Access email":
                         text = "Click Me"
                     elif text == "Save contact":
                         text = "Don't click me"
+                    elif re.match(email_regex, text):
+                        text = text  # Valid email; keep as is
+                    elif text == "No email":
+                        text = "No email warning"
                 
                 row_data.append(text)
             
-            # Print the row data separated by commas
-            print(", ".join(row_data))
+            # Check if this row has not been processed
+            if len(row_data) > 3:
+                potential_email = row_data[3]
+                if potential_email not in processed_emails:
+                    break
+
+        # Process leads starting from the first unprocessed row
+        for row_index in range(start_row_index, num_rows_leads):
+            row = rows[row_index]
+            columns = row.find_elements(By.XPATH, "./*")
+            
+            # Extract row data
+            row_data = []
+            for index, column in enumerate(columns):
+                text = column.text
+                
+                # Modify the 4th column text based on conditions
+                if index == 3:  # 0-based index, so the 4th column is index 3
+                    if text == "Access email":
+                        text = "Click Me"
+                    elif text == "Save contact":
+                        text = "Don't click me"
+                    elif re.match(email_regex, text):
+                        text = text  # Valid email; keep as is
+                    elif text == "No email":
+                        text = "No email warning"
+                
+                row_data.append(text)
+            
+            print(f"Processing Row {row_index}: {', '.join(row_data)}")
+            
+            # Process only rows with enough columns
+            if len(row_data) > 3:
+                email_or_action = row_data[3]
+                
+                # Process rows with valid emails or "Access email"
+                if re.match(email_regex, email_or_action) or email_or_action == "Click Me":
+                    try:
+                        # Find and click "Access email" button
+                        access_email_buttons = row.find_elements(
+                            By.XPATH, 
+                            ".//button[contains(@class, 'zp_qe0Li') and .//span[text()='Access email']]"
+                        )
+                        
+                        if access_email_buttons:
+                            access_email_buttons[0].click()
+                            print(f"Clicked 'Access email' for row {row_index}")
+                            
+                            # Wait a moment for potential loading
+                            time.sleep(2)
+                            
+                            # Try to find and extract the email after clicking
+                            try:
+                                # You might need to adjust this XPATH based on how the email is displayed
+                                email_elements = row.find_elements(By.XPATH, ".//div[contains(@class, 'email-display') or contains(text(), '@')]")
+                                
+                                if email_elements:
+                                    extracted_email = email_elements[0].text.strip()
+                                    
+                                    # Validate the extracted email
+                                    if re.match(email_regex, extracted_email):
+                                        # Check if email is already processed
+                                        if extracted_email not in processed_emails:
+                                            with open('tracking.txt', 'a') as f:
+                                                f.write(f"{extracted_email}\n")
+                                            print(f"Saved extracted email to tracking: {extracted_email}")
+                                            processed_emails.add(extracted_email)
+                                    else:
+                                        print(f"Invalid email format: {extracted_email}")
+                                else:
+                                    print(f"No email element found for row {row_index}")
+                            
+                            except Exception as email_extract_error:
+                                print(f"Error extracting email: {email_extract_error}")
+                        
+                    except Exception as e:
+                        print(f"Error processing row {row_index}: {e}")
+                
+                # Small delay between row processing
+                time.sleep(1)
+        
+        print("Lead processing complete.")
 
     except Exception as e:
         print(f"Error in login to Apollo part 1: {str(e)}")
@@ -769,51 +872,28 @@ def login_to_apollo(workemail, password, linkedin_email, linkedin_pass, num_lead
         #if driver:
         #    driver.quit()
 
-def login_to_linkedin(driver, linkedin_email, linkedin_pass):
-    current_window_handle = driver.current_window_handle
+def vtiger_login(driver, vtiger_email , vtiger_pass):
+    driver.execute_script("window.open('https://crmaccess.vtiger.com/log-in/','_blank');")
+    print("Logging in...")
+    email_field = driver.find_element(By.NAME, "username")
+    password_field = driver.find_element(By.NAME, "password")
+    email_field.send_keys(username)
+    password_field.send_keys(password)
+    password_field.send_keys(Keys.RETURN)
+    time.sleep(25)
 
-    # Open a new tab for LinkedIn login
-    driver.execute_script("window.open('');")
-    time.sleep(2)
-    driver.switch_to.window(driver.window_handles[-1])
 
-    # Navigate to LinkedIn login page
-    driver.get("https://www.linkedin.com/login")
-    print("Entering new tab:", driver.title)
-
-    # Wait for elements to load (can be adjusted with WebDriverWait if needed)
-    time.sleep(3)
-
-    # Locate and fill in the email input
-    username = driver.find_element(By.XPATH, "//input[@name='session_key']")
-    username.send_keys(linkedin_email)
-
-    # Locate and fill in the password input
-    password = driver.find_element(By.XPATH, "//input[@name='session_password']")
-    for char in linkedin_pass:
-        password.send_keys(char)
-
-    # Locate and click the login button
-    login_button = driver.find_element(By.XPATH, "//button[@type='submit']")
-    login_button.click()
-
-    # Print confirmation
-    print("Successfully logged into LinkedIn.")
-
-    # Wait for 2FA (20 seconds) if necessary
-    time.sleep(20)  # Adjust this time as needed for the 2FA step
-
-    # Switch back to the original tab
-    driver.switch_to.window(current_window_handle)
-    print("Switched back to the original tab.")
-    
-    return driver
+    return
+def ssm_login(driver, extract_company_name):
+    driver.execute_script("window.open('https://www.ssm-einfo.my/', '_blank');")
+    time.sleep(10000)
+    return driver 
 
 def on_submit(root):
     work_email = workemail_entry.get()
     password = password_entry.get()
-    linkedin_email_entry = linkedin_email.get()
-    linkedin_password_entry = linkedin_password.get()
+    vtiger_email_entry = vtiger_email.get()
+    vtiger_password_entry = vtiger_password.get()
     ssm_email_entry = ssm_email.get()
     ssm_password_entry = ssm_password.get()
     num =  num_leads.get() # Number of leads 
@@ -822,7 +902,7 @@ def on_submit(root):
         messagebox.showerror("Input error", "Please enter all fields !")
         return
     
-    threading.Thread(target=login_to_apollo, args=(work_email,password,linkedin_email_entry,linkedin_password_entry,num)).start()
+    threading.Thread(target=login_to_apollo, args=(work_email,password,vtiger_email_entry,vtiger_password_entry,num)).start()
     root.destroy()
 
 def apollo_login():
@@ -879,23 +959,23 @@ def apollo_login():
     eye_button_apollo.bind("<ButtonPress-1>", lambda event: show_password(event, password_entry))  # Show password
     eye_button_apollo.bind("<ButtonRelease-1>", lambda event: hide_password(event, password_entry))  # Hide password
 
-    # Linkedin Email and Password
+    # VTiger Email and Password
     ttk.Label(frm, text="Linkedin account credential", font=bold_font).grid(column=0, row=3, columnspan=2, pady=(20, 10), sticky="w")
-    ttk.Label(frm, text="Linkedin Email:").grid(column=0, row=4, sticky="w", padx=10, pady=5)
-    global linkedin_email
-    linkedin_email = ttk.Entry(frm, width=50)
-    linkedin_email.grid(column=1, row=4, padx=10, pady=5, sticky="w")
+    ttk.Label(frm, text="VTiger Email:").grid(column=0, row=4, sticky="w", padx=10, pady=5)
+    global vtiger_email
+    vtiger_email = ttk.Entry(frm, width=50)
+    vtiger_email.grid(column=1, row=4, padx=10, pady=5, sticky="w")
     
-    ttk.Label(frm, text="Linkedin Password:").grid(column=0, row=5, sticky="w", padx=10, pady=5)
-    global linkedin_password
-    linkedin_password = ttk.Entry(frm, width=50, show="*")
-    linkedin_password.grid(column=1, row=5, padx=10, pady=(15, 20), sticky="w")
+    ttk.Label(frm, text="VTiger Password:").grid(column=0, row=5, sticky="w", padx=10, pady=5)
+    global vtiger_password
+    vtiger_password = ttk.Entry(frm, width=50, show="*")
+    vtiger_password.grid(column=1, row=5, padx=10, pady=(15, 20), sticky="w")
 
     # Eye button for Linkedin password
     eye_button_linkedin = ttk.Button(frm, text="👁")
     eye_button_linkedin.grid(column=2, row=5, padx=5, sticky="w")
-    eye_button_linkedin.bind("<ButtonPress-1>", lambda event: show_password(event, linkedin_password))  # Show password
-    eye_button_linkedin.bind("<ButtonRelease-1>", lambda event: hide_password(event, linkedin_password))  # Hide password
+    eye_button_linkedin.bind("<ButtonPress-1>", lambda event: show_password(event, vtiger_password))  # Show password
+    eye_button_linkedin.bind("<ButtonRelease-1>", lambda event: hide_password(event, vtiger_password))  # Hide password
     
     # For SSM
     ttk.Label(frm, text="SSM account credential", font=bold_font).grid(column=0, row=6, columnspan=2, pady=(20, 10), sticky="w")
