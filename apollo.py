@@ -760,44 +760,32 @@ def login_to_apollo(workemail, password, vtiger_email, vtiger_pass, num_leads):
 
         # Determine the starting row index
         start_row_index = 0
-        for start_row_index in range(num_rows_leads):
-            row = rows[start_row_index]
-            columns = row.find_elements(By.XPATH, "./*")
-            
-            # Extract row data
-            row_data = []
-            for index, column in enumerate(columns):
-                text = column.text
-                
-                # Modify the 4th column text based on conditions
-                if index == 3:  # 0-based index, so the 4th column is index 3
-                    if text == "Access email":
-                        text = "Click Me"
-                    elif text == "Save contact":
-                        text = "Don't click me"
-                    elif re.match(email_regex, text):
-                        text = text  # Valid email; keep as is
-                    elif text == "No email":
-                        text = "No email warning"
-                
-                row_data.append(text)
-            
-            # Check if this row has not been processed
-            if len(row_data) > 3:
-                potential_email = row_data[3]
-                if potential_email not in processed_emails:
-                    break
-
-        # Process leads starting from the first unprocessed row
-        for row_index in range(start_row_index, num_rows_leads):
+        for row_index in range(len(rows)):
             row = rows[row_index]
             columns = row.find_elements(By.XPATH, "./*")
-            
+
+            # Check if the row has enough columns
+            if len(columns) > 3:
+                # Extract the 4th column (email or action)
+                text_in_4th_column = columns[3].text.strip()
+                
+                # If the email is not already processed, set the start index
+                if text_in_4th_column not in processed_emails:
+                    start_row_index = row_index
+                    break
+
+        print(f"Starting processing from row index: {start_row_index}")
+
+        # Process leads starting from the first unprocessed row
+        for row_index in range(start_row_index, len(rows)):
+            row = rows[row_index]
+            columns = row.find_elements(By.XPATH, "./*")
+
             # Extract row data
             row_data = []
             for index, column in enumerate(columns):
-                text = column.text
-                
+                text = column.text.strip()
+
                 # Modify the 4th column text based on conditions
                 if index == 3:  # 0-based index, so the 4th column is index 3
                     if text == "Access email":
@@ -808,39 +796,39 @@ def login_to_apollo(workemail, password, vtiger_email, vtiger_pass, num_leads):
                         text = text  # Valid email; keep as is
                     elif text == "No email":
                         text = "No email warning"
-                
+
                 row_data.append(text)
-            
+
             print(f"Processing Row {row_index}: {', '.join(row_data)}")
-            
+
             # Process only rows with enough columns
             if len(row_data) > 3:
                 email_or_action = row_data[3]
-                
+
                 # Process rows with valid emails or "Access email"
                 if re.match(email_regex, email_or_action) or email_or_action == "Click Me":
                     try:
                         # Find and click "Access email" button
                         access_email_buttons = row.find_elements(
-                            By.XPATH, 
+                            By.XPATH,
                             ".//button[contains(@class, 'zp_qe0Li') and .//span[text()='Access email']]"
                         )
-                        
+
                         if access_email_buttons:
                             access_email_buttons[0].click()
                             print(f"Clicked 'Access email' for row {row_index}")
-                            
+
                             # Wait a moment for potential loading
                             time.sleep(2)
-                            
+
                             # Try to find and extract the email after clicking
                             try:
-                                # You might need to adjust this XPATH based on how the email is displayed
+                                # Adjust XPATH for email display based on page structure
                                 email_elements = row.find_elements(By.XPATH, ".//div[contains(@class, 'email-display') or contains(text(), '@')]")
-                                
+
                                 if email_elements:
                                     extracted_email = email_elements[0].text.strip()
-                                    
+
                                     # Validate the extracted email
                                     if re.match(email_regex, extracted_email):
                                         # Check if email is already processed
@@ -853,16 +841,16 @@ def login_to_apollo(workemail, password, vtiger_email, vtiger_pass, num_leads):
                                         print(f"Invalid email format: {extracted_email}")
                                 else:
                                     print(f"No email element found for row {row_index}")
-                            
+
                             except Exception as email_extract_error:
                                 print(f"Error extracting email: {email_extract_error}")
-                        
+
                     except Exception as e:
                         print(f"Error processing row {row_index}: {e}")
-                
+
                 # Small delay between row processing
                 time.sleep(1)
-        
+
         print("Lead processing complete.")
 
     except Exception as e:
@@ -877,8 +865,8 @@ def vtiger_login(driver, vtiger_email , vtiger_pass):
     print("Logging in...")
     email_field = driver.find_element(By.NAME, "username")
     password_field = driver.find_element(By.NAME, "password")
-    email_field.send_keys(username)
-    password_field.send_keys(password)
+    email_field.send_keys(vtiger_email)
+    password_field.send_keys(vtiger_pass)
     password_field.send_keys(Keys.RETURN)
     time.sleep(25)
 
