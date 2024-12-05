@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import Toplevel, ttk
 from tkinter import messagebox
 import sys
+import json
 import os
 import re
 import threading
@@ -603,6 +604,22 @@ def select_details_gui():
 def login_to_apollo(workemail, password, vtiger_email, vtiger_pass, num_leads):
     driver = None
     countdown = None 
+
+    # Function to extract emails from the file and store them into a list
+    def extract_emails_from_file(file_path):
+        email_list = []
+        try:
+            with open(file_path, "r") as file:
+                for line in file:
+                    # Remove whitespace and add to the list if it's not empty
+                    email = line.strip()
+                    if email:
+                        email_list.append(email)
+        except FileNotFoundError:
+            print(f"File '{file_path}' not found.")
+        return email_list
+
+
     try:
         options = uc.ChromeOptions()
         options.add_argument("--start-minimized")  # Or remove if testing in non-headless mode
@@ -735,7 +752,12 @@ def login_to_apollo(workemail, password, vtiger_email, vtiger_pass, num_leads):
         )
         hide_filters_element.click()
 
-        # Wait for the target container to be present
+        tracking_file = "tracking.txt"
+        emails = extract_emails_from_file(tracking_file)
+        emails_json = json.dumps(emails, indent=4)
+        print("Extracted Emails in JSON Format:")
+        print(emails_json)   
+
         target_div = WebDriverWait(driver, 10).until(
             EC.presence_of_element_located((By.CLASS_NAME, "zp_tFLCQ"))
         )
@@ -743,115 +765,57 @@ def login_to_apollo(workemail, password, vtiger_email, vtiger_pass, num_leads):
         # Locate all rows within the container
         rows = target_div.find_elements(By.XPATH, "./div")
 
-        email_regex = r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
-        num_rows_leads = int(num_leads)
-        print(f"Number of leads to process: {num_rows_leads}")
-        print("Row data:")
+        print("Processing row data:")
+        for i, row in enumerate(rows):
+            if i >= int(num_leads):  # Stop processing after num_leads rows
+                break
 
-# Load previously processed emails from tracking.txt
-        processed_emails = set()
-        try:
-            with open('tracking.txt', 'r') as f:
-                processed_emails = set(f.read().splitlines())
-            print(f"Loaded {len(processed_emails)} processed emails from tracking.txt")
-        except FileNotFoundError:
-            print("tracking.txt not found. Creating a new tracking file.")
-            open('tracking.txt', 'w').close()
-
-        # Determine the starting row index
-        start_row_index = 0
-        for row_index in range(len(rows)):
-            row = rows[row_index]
+            # Locate all columns within the current row
             columns = row.find_elements(By.XPATH, "./*")
 
-            # Check if the row has enough columns
-            if len(columns) > 3:
-                # Extract the 4th column (email or action)
-                text_in_4th_column = columns[3].text.strip()
-                
-                # If the email is not already processed, set the start index
-                if text_in_4th_column not in processed_emails:
-                    start_row_index = row_index
-                    break
+            # Extract text from each column
+            row_data = [column.text for column in columns]
+            print(", ".join(row_data))  # Print full row data
 
-        print(f"Starting processing from row index: {start_row_index}")
+            # Ensure there are enough columns to check the 4th one
+            if len(columns) < 4:
+                continue
 
-        # Process leads starting from the first unprocessed row
-        for row_index in range(start_row_index, len(rows)):
-            row = rows[row_index]
-            columns = row.find_elements(By.XPATH, "./*")
+            # Extract text from the 4th column
+            fourth_column_text = columns[3].text.strip()
 
-            # Extract row data
-            row_data = []
-            for index, column in enumerate(columns):
-                text = column.text.strip()
+            if fourth_column_text == "Access email":
+                # Locate the "Access email" button for the current row
+                access_email_buttons = row.find_elements(
+                    By.XPATH,
+                    ".//button[contains(@class, 'zp_qe0Li') and .//span[text()='Access email']]"
+                )
+                if access_email_buttons:
+                    # Click the button and wait for 5 seconds
+                    access_email_buttons[0].click()
+                    time.sleep(5)
 
-                # Modify the 4th column text based on conditions
-                if index == 3:  # 0-based index, so the 4th column is index 3
-                    if text == "Access email":
-                        text = "Click Me"
-                    elif text == "Save contact":
-                        text = "Don't click me"
-                    elif re.match(email_regex, text):
-                        text = text  # Valid email; keep as is
-                    elif text == "No email":
-                        text = "No email warning"
+                    # Re-fetch the 4th column's text
+                    columns = row.find_elements(By.XPATH, "./*")
+                    if len(columns) >= 4:
+                        fourth_column_text = columns[3].text.strip()
 
-                row_data.append(text)
+                        # Save the updated text into tracking.txt
+                        with open("tracking.txt", "a") as f:
+                            f.write(f"{fourth_column_text}\n")
 
-            print(f"Processing Row {row_index}: {', '.join(row_data)}")
+            elif fourth_column_text == "Save contact":
+                # Ignore this row and continue to the next
+                continue
 
-            # Process only rows with enough columns
-            if len(row_data) > 3:
-                email_or_action = row_data[3]
+            elif "@" in fourth_column_text:
+                # Save email into tracking.txt
+                with open("tracking.txt", "a") as f:
+                    f.write(f"{fourth_column_text}\n")
 
-                # Process rows with valid emails or "Access email"
-                if re.match(email_regex, email_or_action) or email_or_action == "Click Me":
-                    try:
-                        # Find and click "Access email" button
-                        access_email_buttons = row.find_elements(
-                            By.XPATH,
-                            ".//button[contains(@class, 'zp_qe0Li') and .//span[text()='Access email']]"
-                        )
-
-                        if access_email_buttons:
-                            access_email_buttons[0].click()
-                            print(f"Clicked 'Access email' for row {row_index}")
-
-                            # Wait a moment for potential loading
-                            time.sleep(2)
-
-                            # Try to find and extract the email after clicking
-                            try:
-                                # Adjust XPATH for email display based on page structure
-                                email_elements = row.find_elements(By.XPATH, ".//div[contains(@class, 'email-display') or contains(text(), '@')]")
-
-                                if email_elements:
-                                    extracted_email = email_elements[0].text.strip()
-
-                                    # Validate the extracted email
-                                    if re.match(email_regex, extracted_email):
-                                        # Check if email is already processed
-                                        if extracted_email not in processed_emails:
-                                            with open('tracking.txt', 'a') as f:
-                                                f.write(f"{extracted_email}\n")
-                                            print(f"Saved extracted email to tracking: {extracted_email}")
-                                            processed_emails.add(extracted_email)
-                                    else:
-                                        print(f"Invalid email format: {extracted_email}")
-                                else:
-                                    print(f"No email element found for row {row_index}")
-
-                            except Exception as email_extract_error:
-                                print(f"Error extracting email: {email_extract_error}")
-
-                    except Exception as e:
-                        print(f"Error processing row {row_index}: {e}")
-
-                # Small delay between row processing
-                time.sleep(1)
-
-        print("Lead processing complete.")
+            elif fourth_column_text == "No email":
+                # Ignore this row and continue to the next
+                continue
 
     except Exception as e:
         print(f"Error in login to Apollo part 1: {str(e)}")
