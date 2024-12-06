@@ -756,39 +756,44 @@ def login_to_apollo(workemail, password, vtiger_email, vtiger_pass, num_leads):
         emails = extract_emails_from_file(tracking_file)
         emails_json = json.dumps(emails, indent=4)
         print("Extracted Emails in JSON Format:")
-        print(emails_json)   
+        print(emails_json)
+
+        # Initialize the lead processing
+        target_leads = int(num_leads)
+        current_leads = 0
 
         target_div = WebDriverWait(driver, 10).until(
             EC.presence_of_element_located((By.CLASS_NAME, "zp_tFLCQ"))
         )
-
-       # Locate all rows within the container
+        # Locate all rows within the container
         rows = target_div.find_elements(By.XPATH, "./div")
-        
+
         print("Processing row data:")
         for i, row in enumerate(rows):
-            if i >= int(num_leads):  # Stop processing after num_leads rows
+            # Check if we've processed the desired number of leads
+            if current_leads >= target_leads:
                 break
 
             # Locate all columns within the current row
             columns = row.find_elements(By.XPATH, "./*")
-
+            
             # Extract text from each column
             row_data = [column.text for column in columns]
             print(", ".join(row_data))  # Print full row data
-
+            
             # Ensure there are enough columns to check the 4th one
             if len(columns) < 4:
+                # If row is skipped, add 1 to continue searching for leads
                 continue
-
+            
             # Extract text from the 4th column
             fourth_column_text = columns[3].text.strip()
-
+            
             # Check if the 4th column's text exists in emails_json
             if fourth_column_text in emails:
                 print(f"Skipping row (Already processed): {', '.join(row_data)}")
                 continue
-
+            
             if fourth_column_text == "Access email":
                 # Locate the "Access email" button for the current row
                 access_email_buttons = row.find_elements(
@@ -799,23 +804,26 @@ def login_to_apollo(workemail, password, vtiger_email, vtiger_pass, num_leads):
                     # Click the button and wait for 5 seconds
                     access_email_buttons[0].click()
                     time.sleep(5)
-
+                    
                     # Re-fetch the 4th column's text
                     columns = row.find_elements(By.XPATH, "./*")
                     if len(columns) >= 4:
                         fourth_column_text = columns[3].text.strip()
-
+                        
                         # Save the updated text into tracking.txt
                         with open("tracking.txt", "a") as f:
                             f.write(f"{fourth_column_text}\n")
                         
                         # Print the accepted row
                         print(f"Accepted row (Access email updated): {', '.join(row_data)} >>> Clicked email address: {fourth_column_text}")
-
+                        
+                        # Decrement current leads
+                        current_leads += 1
+            
             elif fourth_column_text == "Save contact":
                 # Ignore this row and continue to the next
                 continue
-
+            
             elif "@" in fourth_column_text:
                 # Save email into tracking.txt
                 with open("tracking.txt", "a") as f:
@@ -823,11 +831,18 @@ def login_to_apollo(workemail, password, vtiger_email, vtiger_pass, num_leads):
                 
                 # Print the accepted row
                 print(f"Accepted row (Email): {', '.join(row_data)}")
-
+                
+                # Increment current leads
+                current_leads += 1
+            
             elif fourth_column_text == "No email":
                 # Ignore this row and continue to the next
                 continue
 
+        # Print final lead processing summary
+        print(f"\nLead Processing Summary:")
+        print(f"Initial Leads Requested: {target_leads}")
+        print(f"Leads Processed: {current_leads}")
     except Exception as e:
         print(f"Error in login to Apollo part 1: {str(e)}")
     finally:
