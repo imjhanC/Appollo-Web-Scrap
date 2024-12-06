@@ -762,9 +762,9 @@ def login_to_apollo(workemail, password, vtiger_email, vtiger_pass, num_leads):
             EC.presence_of_element_located((By.CLASS_NAME, "zp_tFLCQ"))
         )
 
-        # Locate all rows within the container
+       # Locate all rows within the container
         rows = target_div.find_elements(By.XPATH, "./div")
-
+        
         print("Processing row data:")
         for i, row in enumerate(rows):
             if i >= int(num_leads):  # Stop processing after num_leads rows
@@ -783,6 +783,11 @@ def login_to_apollo(workemail, password, vtiger_email, vtiger_pass, num_leads):
 
             # Extract text from the 4th column
             fourth_column_text = columns[3].text.strip()
+
+            # Check if the 4th column's text exists in emails_json
+            if fourth_column_text in emails:
+                print(f"Skipping row (Already processed): {', '.join(row_data)}")
+                continue
 
             if fourth_column_text == "Access email":
                 # Locate the "Access email" button for the current row
@@ -803,6 +808,9 @@ def login_to_apollo(workemail, password, vtiger_email, vtiger_pass, num_leads):
                         # Save the updated text into tracking.txt
                         with open("tracking.txt", "a") as f:
                             f.write(f"{fourth_column_text}\n")
+                        
+                        # Print the accepted row
+                        print(f"Accepted row (Access email updated): {', '.join(row_data)} >>> Clicked email address: {fourth_column_text}")
 
             elif fourth_column_text == "Save contact":
                 # Ignore this row and continue to the next
@@ -812,6 +820,9 @@ def login_to_apollo(workemail, password, vtiger_email, vtiger_pass, num_leads):
                 # Save email into tracking.txt
                 with open("tracking.txt", "a") as f:
                     f.write(f"{fourth_column_text}\n")
+                
+                # Print the accepted row
+                print(f"Accepted row (Email): {', '.join(row_data)}")
 
             elif fourth_column_text == "No email":
                 # Ignore this row and continue to the next
