@@ -816,9 +816,12 @@ def login_to_apollo(workemail, password, vtiger_email, vtiger_pass, num_leads):
                         
                         # Print the accepted row
                         print(f"Accepted row (Access email updated): {', '.join(row_data)} >>> Clicked email address: {fourth_column_text}")
-                        
+                        vtiger_login(driver, vtiger_email, vtiger_pass, fourth_column_text)
                         # Decrement current leads
                         current_leads += 1
+                else:
+                    # If there is no email address even if the Access email button is clicked , ignore and proceed to the next row 
+                    continue
             
             elif fourth_column_text == "Save contact":
                 # Ignore this row and continue to the next
@@ -832,11 +835,16 @@ def login_to_apollo(workemail, password, vtiger_email, vtiger_pass, num_leads):
                 # Print the accepted row
                 print(f"Accepted row (Email): {', '.join(row_data)}")
                 
+                vtiger_login(driver, vtiger_email, vtiger_pass, fourth_column_text)
                 # Increment current leads
                 current_leads += 1
             
             elif fourth_column_text == "No email":
                 # Ignore this row and continue to the next
+                continue
+
+            #If there is nothing match with all 5 criteria then ignore 
+            else:
                 continue
 
         # Print final lead processing summary
@@ -850,18 +858,30 @@ def login_to_apollo(workemail, password, vtiger_email, vtiger_pass, num_leads):
         #if driver:
         #    driver.quit()
 
-def vtiger_login(driver, vtiger_email , vtiger_pass):
-    driver.execute_script("window.open('https://crmaccess.vtiger.com/log-in/','_blank');")
-    print("Logging in...")
-    email_field = driver.find_element(By.NAME, "username")
-    password_field = driver.find_element(By.NAME, "password")
+def vtiger_login(driver , vtiger_email , vtiger_pass,each_row_email):
+    # Save the current window handle (original tab)
+    original_tab = driver.current_window_handle
+    driver.execute_script("window.open('https://crmaccess.vtiger.com/log-in/', '_blank');")
+    time.sleep(2)  # Give some time for the tab to open
+    driver.switch_to.window(driver.window_handles[-1])  # Switch to the new tab
+    print("\nVTiger Logging in...")
+    print("Row by each row: " + each_row_email)
+    email_field = WebDriverWait(driver, 10).until(
+        EC.presence_of_element_located((By.NAME, "username"))
+    )
+    password_field = WebDriverWait(driver, 10).until(
+        EC.presence_of_element_located((By.NAME, "password"))
+    )
     email_field.send_keys(vtiger_email)
     password_field.send_keys(vtiger_pass)
     password_field.send_keys(Keys.RETURN)
-    time.sleep(25)
+    time.sleep(5)
+    # Switch back to the original tab
+    #driver.close()
+    driver.switch_to.window(original_tab)
+    print("Switched back to the original tab.")
+    
 
-
-    return
 def ssm_login(driver, extract_company_name):
     driver.execute_script("window.open('https://www.ssm-einfo.my/', '_blank');")
     time.sleep(10000)
