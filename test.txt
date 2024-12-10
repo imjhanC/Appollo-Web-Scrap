@@ -1,0 +1,135 @@
+target_leads = int(num_leads)
+        current_leads = 0
+        total_rows_processed = 0
+        page_number = 1  # Track current page
+
+        while current_leads < target_leads:
+            # Locate the target div for the current page
+            target_div = WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.CLASS_NAME, "zp_tFLCQ"))
+            )
+            
+            # Locate all rows within the container
+            rows = target_div.find_elements(By.XPATH, "./div")
+
+            print(f"Processing rows on Page {page_number}:")
+            for i, row in enumerate(rows):
+                # Check if we've processed the desired number of leads
+                if current_leads >= target_leads:
+                    break
+
+                # Locate all columns within the current row
+                columns = row.find_elements(By.XPATH, "./*")
+                
+                # Extract text from each column
+                row_data = [column.text for column in columns]
+                print(", ".join(row_data))  # Print full row data
+                
+                # Ensure there are enough columns to check the 4th one
+                if len(columns) < 4:
+                    continue
+                
+                # Extract text from the 4th column
+                fourth_column_text = columns[3].text.strip()
+                
+                # Check if the 4th column's text exists in emails_json
+                if fourth_column_text in emails:
+                    print(f"Skipping row (Already processed): {', '.join(row_data)}")
+                    continue
+                
+                if fourth_column_text == "Access email":
+                    # Locate the "Access email" button for the current row
+                    access_email_buttons = row.find_elements(
+                        By.XPATH,
+                        ".//button[contains(@class, 'zp_qe0Li') and .//span[text()='Access email']]"
+                    )
+                    if access_email_buttons:
+                        # Click the button and wait for 5 seconds
+                        access_email_buttons[0].click()
+                        time.sleep(5)
+                        
+                        # Re-fetch the 4th column's text
+                        columns = row.find_elements(By.XPATH, "./*")
+                        if len(columns) >= 4:
+                            fourth_column_text = columns[3].text.strip()
+                            
+                            # Simple email validation
+                            if '@' in fourth_column_text and '.' in fourth_column_text:
+                                # Save the updated text into tracking.txt
+                                with open("tracking.txt", "a") as f:
+                                    f.write(f"{fourth_column_text}\n")
+                                
+                                # Print the accepted row
+                                print(f"Accepted row (Access email updated): {', '.join(row_data)} >>> Clicked email address: {fourth_column_text}")
+                                
+                                #vtiger_login(driver, vtiger_email, vtiger_pass, fourth_column_text)
+                                current_leads += 1
+                            else:
+                                # If not an email, ignore and continue to next row
+                                continue
+                
+                elif fourth_column_text == "Save contact":
+                    continue
+                
+                elif "@" in fourth_column_text:
+                    # Save email into tracking.txt
+                    with open("tracking.txt", "a") as f:
+                        f.write(f"{fourth_column_text}\n")
+                    
+                    # Print the accepted row
+                    print(f"Accepted row (Email): {', '.join(row_data)}")
+                    
+                    #vtiger_login(driver, vtiger_email, vtiger_pass, fourth_column_text)
+                    current_leads += 1
+                
+                elif fourth_column_text == "No email":
+                    continue
+                else:
+                    continue
+
+                # Increment total rows processed
+                total_rows_processed += 1
+
+            # Check if we need to navigate to the next page
+            if current_leads < target_leads:
+                try:
+                    # Locate the page navigation combobox
+                    page_dropdown = WebDriverWait(driver, 10).until(
+                        EC.element_to_be_clickable((By.XPATH, "//div[@class='zp_VTl3h zp_xqxgc']"))
+                    )
+                    
+                    # Click to open the dropdown
+                    page_dropdown.click()
+                    
+                    # Wait for the dropdown options to appear
+                    page_options = WebDriverWait(driver, 10).until(
+                        EC.presence_of_all_elements_located((By.XPATH, "//div[@role='option']"))
+                    )
+                    
+                    # Check if there's a next page available
+                    page_number += 1
+                    if page_number <= len(page_options):
+                        # Select the next page option
+                        page_options[page_number - 1].click()
+                        
+                        # Wait for the page to load
+                        time.sleep(3)  # Add a small delay to ensure page loads
+                    else:
+                        print("No more pages available.")
+                        break
+                
+                except Exception as e:
+                    print(f"Error navigating to next page: {e}")
+                    break
+
+            # Safety check to prevent infinite loop
+            if total_rows_processed >= 25 * 5:  # Limit to 5 pages
+                print("Reached maximum pages. Stopping lead processing.")
+                break
+
+        # Print final lead processing summary
+        print(f"\nLead Processing Summary:")
+        print(f"Initial Leads Requested: {target_leads}")
+        print(f"Leads Processed: {current_leads}")
+        print(f"Total Rows Processed: {total_rows_processed}")
+        print(f"Total Pages Processed: {page_number}")

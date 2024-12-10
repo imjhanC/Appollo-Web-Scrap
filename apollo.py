@@ -816,7 +816,7 @@ def login_to_apollo(workemail, password, vtiger_email, vtiger_pass, num_leads):
                         
                         # Print the accepted row
                         print(f"Accepted row (Access email updated): {', '.join(row_data)} >>> Clicked email address: {fourth_column_text}")
-                        vtiger_login(driver, vtiger_email, vtiger_pass, fourth_column_text)
+                        #vtiger_login(driver, vtiger_email, vtiger_pass, fourth_column_text)
                         # Decrement current leads
                         current_leads += 1
                 else:
@@ -835,7 +835,7 @@ def login_to_apollo(workemail, password, vtiger_email, vtiger_pass, num_leads):
                 # Print the accepted row
                 print(f"Accepted row (Email): {', '.join(row_data)}")
                 
-                vtiger_login(driver, vtiger_email, vtiger_pass, fourth_column_text)
+                #vtiger_login(driver, vtiger_email, vtiger_pass, fourth_column_text)
                 # Increment current leads
                 current_leads += 1
             
