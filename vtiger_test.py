@@ -39,8 +39,19 @@ def main():
     email_field.send_keys("")
     password_field.send_keys("")
     password_field.send_keys(Keys.RETURN)
+    try:
+        signout_xpath = "//a[contains(@class, 'btn btn-secondary') and contains(text(), 'Sign out of all active sessions')]"
 
-    time.sleep(5)
+        # Wait for the element to be present
+        signout_element = WebDriverWait(driver, 5).until(
+            EC.presence_of_element_located((By.XPATH, signout_xpath))
+        )
+        signout_element.click()
+        print("Clicked 'Sign out of all active sessions'")
+    except TimeoutException:
+        # Element not found
+        print("'Sign out of all active sessions' button not found. Skipping...")
+
     # Click for search icon to appear 
     search_icon = WebDriverWait(driver, 10).until(
         EC.element_to_be_clickable((By.XPATH, "//*[@title='Global Search']"))
@@ -81,29 +92,42 @@ def main():
             # Locate all rows within the table
             rows = table_div.find_elements(By.XPATH, "./div")  # Adjust the XPath to match rows
 
-            for i, row in enumerate(rows):
-                # Check for the presence of specific icons
-                has_person_icon = bool(row.find_elements(By.XPATH, ".//i[contains(@class, 'fa-contacts')]"))
-                has_namecard_icon = bool(row.find_elements(By.XPATH, ".//i[contains(@class, 'fa-leads')]"))
-                has_building_icon = bool(row.find_elements(By.XPATH, ".//i[contains(@class, 'fa-accounts')]"))
-                has_comment_icon = bool(row.find_elements(By.XPATH, ".//i[contains(@class, 'fa-comment')]"))
+            # Initialize flags to track the presence of different icons
+            has_person_icon = False
+            has_namecard_icon = False
+            has_building_icon = False
+            has_comment_icon = False
 
-                # Logic to determine if the row is accepted or not
-                if has_person_icon or has_namecard_icon or has_building_icon:
-                    print(f"Row {i+1}: Not accepted row")
-                elif has_comment_icon and not (has_person_icon or has_namecard_icon or has_building_icon):
-                    print(f"Row {i+1}: Accepted row ( Comment only )")
-                elif has_comment_icon and (has_person_icon or has_namecard_icon or has_building_icon):
-                    print(f"Row {i+1}: Not accepted row (has both comment and other icons)")
-                else:
-                    print(f"Row {i+1}: Unclear criteria")
+            # Check each row and update flags
+            for row in rows:
+                if row.find_elements(By.XPATH, ".//i[contains(@class, 'fa-contacts')]"):
+                    has_person_icon = True
+                if row.find_elements(By.XPATH, ".//i[contains(@class, 'fa-leads')]"):
+                    has_namecard_icon = True
+                if row.find_elements(By.XPATH, ".//i[contains(@class, 'fa-accounts')]"):
+                    has_building_icon = True
+                if row.find_elements(By.XPATH, ".//i[contains(@class, 'fa-comment')]"):
+                    has_comment_icon = True
+
+            # Evaluate the overall condition based on flags
+            if (has_person_icon or has_namecard_icon or has_building_icon) and not has_comment_icon:
+                print("Overall Result: Not accepted row (contains icons for person, namecard, or building but no comments)")
+            elif has_comment_icon and not (has_person_icon or has_namecard_icon or has_building_icon):
+                print("Overall Result: Accepted row (contains comments only)")
+            elif has_comment_icon and (has_person_icon or has_namecard_icon or has_building_icon):
+                print("Overall Result: Not accepted row (contains both comments and other icons)")
+            else:
+                print("Overall Result: Unclear criteria")
         except TimeoutException:
             print("Table or rows not found")
     else:
         print("element found")
     
+    close_button = WebDriverWait(driver, 10).until(
+        EC.element_to_be_clickable((By.XPATH, "//*[contains(@class, 'fa-times') and contains(@class, 'c-pointer')]"))
+    )
+    close_button.click()
 
-    time.sleep(100)
     #Sign out part 
     signout_element = WebDriverWait(driver,10).until(
         EC.element_to_be_clickable((By.XPATH, "//*[@id='__BVID__12__BV_toggle_']/span/a/div[1]/span"))
