@@ -761,96 +761,123 @@ def login_to_apollo(workemail, password, vtiger_email, vtiger_pass, num_leads):
         # Initialize the lead processing
         target_leads = int(num_leads)
         current_leads = 0
+        page_num = 1
 
-        target_div = WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.CLASS_NAME, "zp_tFLCQ"))
-        )
-        # Locate all rows within the container
-        rows = target_div.find_elements(By.XPATH, "./div")
-
-        print("Processing row data:")
-        for i, row in enumerate(rows):
-            # Check if we've processed the desired number of leads
-            if current_leads >= target_leads:
-                break
-
-            # Locate all columns within the current row
-            columns = row.find_elements(By.XPATH, "./*")
-            
-            # Extract text from each column
-            row_data = [column.text for column in columns]
-            print(", ".join(row_data))  # Print full row data
-            
-            # Ensure there are enough columns to check the 4th one
-            if len(columns) < 4:
-                # If row is skipped, add 1 to continue searching for leads
-                continue
-            
-            # Extract text from the 4th column
-            fourth_column_text = columns[3].text.strip()
-            
-            # Check if the 4th column's text exists in emails_json
-            if fourth_column_text in emails:
-                print(f"Skipping row (Already processed): {', '.join(row_data)}")
-                continue
-            
-            if fourth_column_text == "Access email":
-                # Locate the "Access email" button for the current row
-                access_email_buttons = row.find_elements(
-                    By.XPATH,
-                    ".//button[contains(@class, 'zp_qe0Li') and .//span[text()='Access email']]"
+        while current_leads < target_leads:
+            try:
+                # Wait for the target div containing rows
+                target_div = WebDriverWait(driver, 10).until(
+                    EC.presence_of_element_located((By.CLASS_NAME, "zp_tFLCQ"))
                 )
-                if access_email_buttons:
-                    # Click the button and wait for 5 seconds
-                    access_email_buttons[0].click()
-                    time.sleep(5)
-                    
-                    # Re-fetch the 4th column's text
+                
+                # Locate all rows within the container
+                rows = target_div.find_elements(By.XPATH, "./div")
+
+                print(f"Processing rows on Page {page_num}:")
+                for i, row in enumerate(rows):
+                    # Check if we've processed the desired number of leads
+                    if current_leads >= target_leads:
+                        break
+
+                    # Locate all columns within the current row
                     columns = row.find_elements(By.XPATH, "./*")
-                    if len(columns) >= 4:
-                        fourth_column_text = columns[3].text.strip()
-                        
-                        # Save the updated text into tracking.txt
+                    
+                    # Extract text from each column
+                    row_data = [column.text for column in columns]
+                    print(", ".join(row_data))  # Print full row data
+                    
+                    # Ensure there are enough columns to check the 4th one
+                    if len(columns) < 4:
+                        # If row is skipped, add 1 to continue searching for leads
+                        continue
+                    
+                    # Extract text from the 4th column
+                    fourth_column_text = columns[3].text.strip()
+                    
+                    # Check if the 4th column's text exists in emails_json
+                    if fourth_column_text in emails:
+                        print(f"Skipping row (Already processed): {', '.join(row_data)}")
+                        continue
+                    
+                    if fourth_column_text == "Access email":
+                        # Locate the "Access email" button for the current row
+                        access_email_buttons = row.find_elements(
+                            By.XPATH,
+                            ".//button[contains(@class, 'zp_qe0Li') and .//span[text()='Access email']]"
+                        )
+                        if access_email_buttons:
+                            # Click the button and wait for 5 seconds
+                            access_email_buttons[0].click()
+                            time.sleep(5)
+                            
+                            # Re-fetch the 4th column's text
+                            columns = row.find_elements(By.XPATH, "./*")
+                            if len(columns) >= 4:
+                                fourth_column_text = columns[3].text.strip()
+                                email_address = fourth_column_text.split('+')[0].strip()
+                                # Save the updated text into tracking.txt
+                                with open("tracking.txt", "a") as f:
+                                    f.write(f"{email_address}\n")
+                                
+                                # Print the accepted row
+                                print(f"Accepted row (Access email updated): {', '.join(row_data)} >>> Clicked email address: {fourth_column_text}")
+                                # Uncomment and modify as needed:
+                                # vtiger_login(driver, vtiger_email, vtiger_pass, fourth_column_text)
+                                current_leads += 1
+                        else:
+                            # If there is no email address even if the Access email button is clicked, ignore and proceed to the next row 
+                            continue
+                    
+                    elif fourth_column_text == "Save contact":
+                        # Ignore this row and continue to the next
+                        continue
+                    
+                    elif "@" in fourth_column_text:
+                        email_address = fourth_column_text.split('+')[0].strip()
+                        # Save email into tracking.txt
                         with open("tracking.txt", "a") as f:
-                            f.write(f"{fourth_column_text}\n")
+                            f.write(f"{email_address}\n")
                         
                         # Print the accepted row
-                        print(f"Accepted row (Access email updated): {', '.join(row_data)} >>> Clicked email address: {fourth_column_text}")
-                        #vtiger_login(driver, vtiger_email, vtiger_pass, fourth_column_text)
-                        # Decrement current leads
+                        print(f"Accepted row (Email): {', '.join(row_data)}")
+                        
+                        # Uncomment and modify as needed:
+                        # vtiger_login(driver, vtiger_email, vtiger_pass, fourth_column_text)
                         current_leads += 1
-                else:
-                    # If there is no email address even if the Access email button is clicked , ignore and proceed to the next row 
-                    continue
-            
-            elif fourth_column_text == "Save contact":
-                # Ignore this row and continue to the next
-                continue
-            
-            elif "@" in fourth_column_text:
-                # Save email into tracking.txt
-                with open("tracking.txt", "a") as f:
-                    f.write(f"{fourth_column_text}\n")
-                
-                # Print the accepted row
-                print(f"Accepted row (Email): {', '.join(row_data)}")
-                
-                #vtiger_login(driver, vtiger_email, vtiger_pass, fourth_column_text)
-                # Increment current leads
-                current_leads += 1
-            
-            elif fourth_column_text == "No email":
-                # Ignore this row and continue to the next
-                continue
+                    
+                    elif fourth_column_text == "No email":
+                        # Ignore this row and continue to the next
+                        continue
 
-            #If there is nothing match with all 5 criteria then ignore 
-            else:
-                continue
+                    # If there is nothing matching all 5 criteria then ignore 
+                    else:
+                        continue
+
+                # Check if we need to go to the next page
+                if current_leads < target_leads:
+                    # Try to find and click the next page button
+                    try:
+                        next_page_button = driver.find_element(
+                            By.XPATH, 
+                            "//i[contains(@class, 'apollo-icon-chevron-arrow-right')]"
+                        )
+                        next_page_button.click()
+                        time.sleep(3)  # Wait for the page to load
+                        page_num += 1
+                    except NoSuchElementException:
+                        # No more pages available
+                        print("Reached the last page. Cannot find more leads.")
+                        break
+
+            except Exception as e:
+                print(f"Error processing page {page_num}: {e}")
+                break
 
         # Print final lead processing summary
         print(f"\nLead Processing Summary:")
         print(f"Initial Leads Requested: {target_leads}")
         print(f"Leads Processed: {current_leads}")
+        print(f"Total Pages Processed: {page_num}")
     except Exception as e:
         print(f"Error in login to Apollo part 1: {str(e)}")
     finally:
