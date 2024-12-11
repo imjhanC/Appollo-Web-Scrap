@@ -1011,8 +1011,8 @@ def vtiger_login(driver , vtiger_email , vtiger_pass,each_row_email):
     )
     logout_element.click()
     # Switch back to the original tab
-    driver.close()
-    driver.switch_to.window(original_tab)
+    driver.switch_to.window(driver.window_handles[0])
+    # Original  is  driver.switch_to.window(original_tab)
     print("Switched back to the original tab.")
     
 
