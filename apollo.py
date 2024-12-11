@@ -815,18 +815,21 @@ def login_to_apollo(workemail, password, vtiger_email, vtiger_pass, num_leads):
                             if len(columns) >= 4:
                                 fourth_column_text = columns[3].text.strip()
                                 email_address = fourth_column_text.split('+')[0].strip()
-                                # Save the updated text into tracking.txt
-                                with open("tracking.txt", "a") as f:
-                                    f.write(f"{email_address}\n")
+
+                                # Verify whether the text is an email even when the Access email is clicked
+                                if '@' in email_address and '.' in email_address:
+                                    # Save the updated text into tracking.txt
+                                    with open("tracking.txt", "a") as f:
+                                        f.write(f"{email_address}\n")
                                 
-                                # Print the accepted row
-                                print(f"Accepted row (Access email updated): {', '.join(row_data)} >>> Clicked email address: {fourth_column_text}")
-                                # Uncomment and modify as needed:
-                                # vtiger_login(driver, vtiger_email, vtiger_pass, fourth_column_text)
-                                current_leads += 1
-                        else:
-                            # If there is no email address even if the Access email button is clicked, ignore and proceed to the next row 
-                            continue
+                                    # Print the accepted row
+                                    print(f"Accepted row (Access email updated): {', '.join(row_data)} >>> Clicked email address: {email_address}")
+                                    # Uncomment and modify as needed:
+                                    vtiger_login(driver, vtiger_email, vtiger_pass, email_address)
+                                    current_leads += 1
+                                else:
+                                    # If there is no email address even if the Access email button is clicked, ignore and proceed to the next row 
+                                    continue
                     
                     elif fourth_column_text == "Save contact":
                         # Ignore this row and continue to the next
@@ -842,7 +845,7 @@ def login_to_apollo(workemail, password, vtiger_email, vtiger_pass, num_leads):
                         print(f"Accepted row (Email): {', '.join(row_data)}")
                         
                         # Uncomment and modify as needed:
-                        # vtiger_login(driver, vtiger_email, vtiger_pass, fourth_column_text)
+                        vtiger_login(driver, vtiger_email, vtiger_pass, email_address)
                         current_leads += 1
                     
                     elif fourth_column_text == "No email":
@@ -892,7 +895,14 @@ def vtiger_login(driver , vtiger_email , vtiger_pass,each_row_email):
     time.sleep(2)  # Give some time for the tab to open
     driver.switch_to.window(driver.window_handles[-1])  # Switch to the new tab
     print("\nVTiger Logging in...")
-    print("Row by each row: " + each_row_email)
+    # If you want to debug the email, use the line below it 
+    #print("Row by each row: " + each_row_email)
+    email_field = WebDriverWait(driver, 10).until(
+        EC.presence_of_element_located((By.NAME, "username"))
+    )
+    password_field = WebDriverWait(driver, 10).until(
+        EC.presence_of_element_located((By.NAME, "password"))
+    )
     email_field = WebDriverWait(driver, 10).until(
         EC.presence_of_element_located((By.NAME, "username"))
     )
@@ -902,9 +912,106 @@ def vtiger_login(driver , vtiger_email , vtiger_pass,each_row_email):
     email_field.send_keys(vtiger_email)
     password_field.send_keys(vtiger_pass)
     password_field.send_keys(Keys.RETURN)
-    time.sleep(5)
+    try:
+        signout_xpath = "//a[contains(@class, 'btn btn-secondary') and contains(text(), 'Sign out of all active sessions')]"
+
+        # Wait for the element to be present
+        signout_element = WebDriverWait(driver, 5).until(
+            EC.presence_of_element_located((By.XPATH, signout_xpath))
+        )
+        signout_element.click()
+        print("Clicked 'Sign out of all active sessions'")
+    except TimeoutException:
+        # Element not found
+        print("'Sign out of all active sessions' button not found. Skipping...")
+
+    # Click for search icon to appear 
+    search_icon = WebDriverWait(driver, 10).until(
+        EC.element_to_be_clickable((By.XPATH, "//*[@title='Global Search']"))
+    )
+    search_icon.click()
+    search_input = driver.find_element(By.XPATH, "//*[@id='global_search']")
+    # got comment ken.tee@winstargroup.com.my  (checked )
+    # got everything including namecard , building and person - digista@digistar.com (checked )
+    # single person only - biz@carmin.com (checked )
+    # none for everthing - mohd.anas@emerson.com ( checked )
+    # comment only - dad
+    search_input.send_keys(each_row_email)
+    search_input.send_keys(Keys.RETURN)
+    time.sleep(3)
+    # Checkbox XPATH
+    checkbox_xpath = "/html/body/div[1]/div/div[3]/div[1]/div/div/div[1]/div/div/header/div/div[3]/label/span[1]"
+    checkbox = WebDriverWait(driver, 10).until(
+        EC.presence_of_element_located((By.XPATH, checkbox_xpath))
+    )
+    checkbox.click()
+    try:
+        # Check the not found XPATH div ( This XPATH is for the not found XPATH div )
+        target_xpath = "//*[@id='Global_Search_Display_Modal___BV_modal_body_']/div[2]"
+
+        # Wait until the element is visible
+        element = WebDriverWait(driver, 10).until(
+            EC.visibility_of_element_located((By.XPATH, target_xpath))
+        )
+    except TimeoutException:
+        print("element not found")
+        try:
+            # Locate the table container
+            table_xpath = "//div[@class='allResult scrollbar scrollbar-default']"
+            table_div = WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.XPATH, table_xpath))
+            )
+
+            # Locate all rows within the table
+            rows = table_div.find_elements(By.XPATH, "./div")  # Adjust the XPath to match rows
+
+            # Initialize flags to track the presence of different icons
+            has_person_icon = False
+            has_namecard_icon = False
+            has_building_icon = False
+            has_comment_icon = False
+
+            # Check each row and update flags
+            for row in rows:
+                if row.find_elements(By.XPATH, ".//i[contains(@class, 'fa-contacts')]"):
+                    has_person_icon = True
+                if row.find_elements(By.XPATH, ".//i[contains(@class, 'fa-leads')]"):
+                    has_namecard_icon = True
+                if row.find_elements(By.XPATH, ".//i[contains(@class, 'fa-accounts')]"):
+                    has_building_icon = True
+                if row.find_elements(By.XPATH, ".//i[contains(@class, 'fa-comment')]"):
+                    has_comment_icon = True
+
+            # Evaluate the overall condition based on flags
+            if (has_person_icon or has_namecard_icon or has_building_icon) and not has_comment_icon:
+                print("Overall Result: Not accepted row (contains icons for person, namecard, or building but no comments)")
+            elif has_comment_icon and not (has_person_icon or has_namecard_icon or has_building_icon):
+                print("Overall Result: Accepted row (contains comments only)")
+            elif has_comment_icon and (has_person_icon or has_namecard_icon or has_building_icon):
+                print("Overall Result: Not accepted row (contains both comments and other icons)")
+            else:
+                print("Overall Result: Unclear criteria")
+        except TimeoutException:
+            print("Table or rows not found")
+    else:
+        print("element found")
+    
+    close_button = WebDriverWait(driver, 10).until(
+        EC.element_to_be_clickable((By.XPATH, "//*[contains(@class, 'fa-times') and contains(@class, 'c-pointer')]"))
+    )
+    close_button.click()
+
+    #Sign out part 
+    signout_element = WebDriverWait(driver,10).until(
+        EC.element_to_be_clickable((By.XPATH, "//*[@id='__BVID__12__BV_toggle_']/span/a/div[1]/span"))
+    )
+    signout_element.click()
+    logout_element = WebDriverWait(driver, 10).until(
+        EC.element_to_be_clickable((By.XPATH, "//*[@title='Logout']"))
+    )
+    logout_element.click()
     # Switch back to the original tab
-    #driver.close()
+    driver.close()
     driver.switch_to.window(original_tab)
     print("Switched back to the original tab.")
     
