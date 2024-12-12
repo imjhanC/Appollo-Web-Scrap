@@ -8,8 +8,8 @@ import re
 import threading
 import time 
 import pickle
-from PIL import Image, ImageTk 
 import tkinter.font as tkfont
+from PIL import Image, ImageTk 
 import undetected_chromedriver as uc
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
@@ -624,6 +624,7 @@ def login_to_apollo(workemail, password, vtiger_email, vtiger_pass, num_leads):
         options = uc.ChromeOptions()
         options.add_argument("--start-minimized")  # Or remove if testing in non-headless mode
         options.add_argument("--disable-blink-features=AutomationControlled")
+        #options.add_argument("--disable-blink-features=AutomationControlled")
 
         print("Initializing Chrome...")
         driver = uc.Chrome(options=options)
@@ -664,7 +665,7 @@ def login_to_apollo(workemail, password, vtiger_email, vtiger_pass, num_leads):
             EC.presence_of_element_located((By.XPATH, "//div[@class='zp_aoXyS' and contains(text(), 'People')]"))
         )
         people_element.click()
-        
+        #driver.execute_script("window.open('https://app.apollo.io/#/people?', '_blank');")
         received_text = select_details_gui()
         if received_text is not None:
             job_titles, locations, industries = received_text
@@ -676,13 +677,14 @@ def login_to_apollo(workemail, password, vtiger_email, vtiger_pass, num_leads):
             # Continue with the rest of the Apollo.io interaction
         else:
             print("No details selected or user cancelled.")
-
+        
         # Industry & Keywords
         industry_element = WebDriverWait(driver,10).until(
-            EC.visibility_of_element_located((By.XPATH, "//*[@id='main-app']/div[2]/div/div[2]/div/div/div/div[2]/div[2]/div[2]/div[1]/div/div/div[2]/div[9]/div/span/div[1]/span"))
+            EC.visibility_of_element_located((By.XPATH, "//*[@id='main-app']/div[2]/div/div[2]/div/div/div/div[2]/div[2]/div[2]/div[1]/div/div/div[2]/div[8]/div/span/div[1]"))
         )
         driver.execute_script("arguments[0].scrollIntoView(true);", industry_element)
         industry_element.click()
+        time.sleep(2)
         placeholder_element_industries = WebDriverWait(driver, 10).until(
             EC.element_to_be_clickable((By.CLASS_NAME, "Select-placeholder"))
         )
@@ -695,18 +697,18 @@ def login_to_apollo(workemail, password, vtiger_email, vtiger_pass, num_leads):
         time.sleep(2)
         input_element_industries.send_keys(Keys.ENTER)
         industry_element = WebDriverWait(driver,10).until(
-            EC.visibility_of_element_located((By.XPATH, "//*[@id='main-app']/div[2]/div/div[2]/div/div/div/div[2]/div[2]/div[2]/div[1]/div/div/div[2]/div[9]/div/span/div[1]/span"))
+            EC.visibility_of_element_located((By.XPATH, "//*[@id='main-app']/div[2]/div/div[2]/div/div/div/div[2]/div[2]/div[2]/div[1]/div/div/div[2]/div[8]/div/span/div[1]"))
         )
         driver.execute_script("arguments[0].scrollIntoView(true);", industry_element)
         industry_element.click()
 
         # Job title Input
         job_titles_element = WebDriverWait(driver, 10).until(
-            EC.element_to_be_clickable((By.XPATH, "//span[text()='Job Titles']"))
+            EC.element_to_be_clickable((By.CSS_SELECTOR, "#main-app > div.zp_iqUL3 > div > div.zp_ANgUY > div > div > div > div.zp_ajhD0 > div.zp_p234g.zp_B0KRZ > div.zp_pxYrj > div.zp_FWOdG > div > div > div.zp_pDn5b.zp_T8qTB.zp_w3MDk > div:nth-child(4) > div > span > div.zp_YfgQq > span"))
         )
         driver.execute_script("arguments[0].scrollIntoView(true);", job_titles_element)
         job_titles_element.click()
-
+        time.sleep(2)
         placeholder_element = WebDriverWait(driver, 10).until(
             EC.element_to_be_clickable((By.CLASS_NAME, "Select-placeholder"))
         )
@@ -715,22 +717,23 @@ def login_to_apollo(workemail, password, vtiger_email, vtiger_pass, num_leads):
         job_title_input = WebDriverWait(driver, 10).until(
             EC.presence_of_element_located((By.CSS_SELECTOR, "input.Select-input"))
         )
-        time.sleep(5)
+        time.sleep(2)
         job_title_input.send_keys(job_titles)
         time.sleep(1)
         job_title_input.send_keys(Keys.RETURN)
 
         job_titles_element = WebDriverWait(driver, 10).until(
-            EC.element_to_be_clickable((By.XPATH, "//span[text()='Job Titles']"))
+            EC.element_to_be_clickable((By.CSS_SELECTOR, "#main-app > div.zp_iqUL3 > div > div.zp_ANgUY > div > div > div > div.zp_ajhD0 > div.zp_p234g.zp_B0KRZ > div.zp_pxYrj > div.zp_FWOdG > div > div > div.zp_pDn5b.zp_T8qTB.zp_w3MDk > div:nth-child(4) > div > span > div.zp_YfgQq > span"))
         )
         job_titles_element.click()
 
         # Location Input
         location_element = WebDriverWait(driver,10).until(
-            EC.element_to_be_clickable((By.XPATH, "//span[text()='Location']"))
+            EC.element_to_be_clickable((By.CSS_SELECTOR, "#main-app > div.zp_iqUL3 > div > div.zp_ANgUY > div > div > div > div.zp_ajhD0 > div.zp_p234g.zp_B0KRZ > div.zp_pxYrj > div.zp_FWOdG > div > div > div.zp_pDn5b.zp_T8qTB.zp_w3MDk > div:nth-child(6) > div > span > div.zp_YfgQq > span"))
         )
+        driver.execute_script("arguments[0].scrollIntoView(true);", location_element)
         location_element.click()
-        time.sleep(3)
+        time.sleep(2)
         placeholder_element = WebDriverWait(driver, 10).until(
             EC.element_to_be_clickable((By.CLASS_NAME, "Select-placeholder"))
         )
@@ -742,9 +745,10 @@ def login_to_apollo(workemail, password, vtiger_email, vtiger_pass, num_leads):
         time.sleep(2)
         input_element.send_keys(Keys.RETURN)
         location_element = WebDriverWait(driver,10).until(
-            EC.element_to_be_clickable((By.XPATH, "//span[text()='Location']"))
+            EC.element_to_be_clickable((By.CSS_SELECTOR, "#main-app > div.zp_iqUL3 > div > div.zp_ANgUY > div > div > div > div.zp_ajhD0 > div.zp_p234g.zp_B0KRZ > div.zp_pxYrj > div.zp_FWOdG > div > div > div.zp_pDn5b.zp_T8qTB.zp_w3MDk > div:nth-child(6) > div > span > div.zp_YfgQq > span"))
         )
         location_element.click()
+
 
         # This is to hide the filter 
         hide_filters_element = WebDriverWait(driver, 10).until(
