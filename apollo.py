@@ -632,7 +632,6 @@ def login_to_apollo(workemail, password, vtiger_email, vtiger_pass, num_leads):
         print("Logging in...")
         driver.get('https://app.apollo.io/#/login')
         wait = WebDriverWait(driver, 10)  # Wait up to 10 seconds
-
         # Find and click the "Log In with Microsoft" button
         login_button = wait.until(EC.element_to_be_clickable((By.XPATH, "//div[text()='Log In with Microsoft']/parent::button")))  
         login_button.click()
@@ -829,7 +828,7 @@ def login_to_apollo(workemail, password, vtiger_email, vtiger_pass, num_leads):
                                     # Print the accepted row
                                     print(f"Accepted row (Access email updated): {', '.join(row_data)} >>> Clicked email address: {email_address}")
                                     # Uncomment and modify as needed:
-                                    vtiger_login(driver, vtiger_email, vtiger_pass, email_address)
+                                    vtiger_login(driver, vtiger_email, vtiger_pass, email_address,location_element)
                                     current_leads += 1
                                 else:
                                     # If there is no email address even if the Access email button is clicked, ignore and proceed to the next row 
@@ -849,7 +848,7 @@ def login_to_apollo(workemail, password, vtiger_email, vtiger_pass, num_leads):
                         print(f"Accepted row (Email): {', '.join(row_data)}")
                         
                         # Uncomment and modify as needed:
-                        vtiger_login(driver, vtiger_email, vtiger_pass, email_address)
+                        vtiger_login(driver, vtiger_email, vtiger_pass, email_address,location_element)
                         current_leads += 1
                     
                     elif fourth_column_text == "No email":
@@ -892,7 +891,7 @@ def login_to_apollo(workemail, password, vtiger_email, vtiger_pass, num_leads):
         #if driver:
         #    driver.quit()
 
-def vtiger_login(driver , vtiger_email , vtiger_pass,each_row_email):
+def vtiger_login(driver , vtiger_email , vtiger_pass,each_row_email,location):
     # Save the current window handle (original tab)
     original_tab = driver.current_window_handle
     driver.execute_script("window.open('https://crmaccess.vtiger.com/log-in/', '_blank');")
@@ -1021,9 +1020,9 @@ def vtiger_login(driver , vtiger_email , vtiger_pass,each_row_email):
     
 
 def ssm_login(driver, extract_company_name):
-    driver.execute_script("window.open('https://www.ssm-einfo.my/', '_blank');")
-    time.sleep(10000)
-    return driver 
+    driver.execute_script("window.open('https://www.mysbusiness.com/search', '_blank');")
+    driver.switch_to.window(driver.window_handles[2])
+    time.sleep(1000)
 
 def on_submit(root):
     work_email = workemail_entry.get()
