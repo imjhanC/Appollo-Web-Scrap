@@ -828,7 +828,7 @@ def login_to_apollo(workemail, password, vtiger_email, vtiger_pass, num_leads):
                                     # Print the accepted row
                                     print(f"Accepted row (Access email updated): {', '.join(row_data)} >>> Clicked email address: {email_address}")
                                     # Uncomment and modify as needed:
-                                    vtiger_login(driver, vtiger_email, vtiger_pass, email_address,location_element)
+                                    vtiger_login(driver, vtiger_email, vtiger_pass, email_address,locations)
                                     current_leads += 1
                                 else:
                                     # If there is no email address even if the Access email button is clicked, ignore and proceed to the next row 
@@ -848,7 +848,7 @@ def login_to_apollo(workemail, password, vtiger_email, vtiger_pass, num_leads):
                         print(f"Accepted row (Email): {', '.join(row_data)}")
                         
                         # Uncomment and modify as needed:
-                        vtiger_login(driver, vtiger_email, vtiger_pass, email_address,location_element)
+                        vtiger_login(driver, vtiger_email, vtiger_pass, email_address,locations)
                         current_leads += 1
                     
                     elif fourth_column_text == "No email":
@@ -891,12 +891,12 @@ def login_to_apollo(workemail, password, vtiger_email, vtiger_pass, num_leads):
         #if driver:
         #    driver.quit()
 
-def vtiger_login(driver , vtiger_email , vtiger_pass,each_row_email,location):
+def vtiger_login(driver , vtiger_email , vtiger_pass,each_row_email,locations):
     # Save the current window handle (original tab)
     original_tab = driver.current_window_handle
     driver.execute_script("window.open('https://crmaccess.vtiger.com/log-in/', '_blank');")
     time.sleep(2)  # Give some time for the tab to open
-    driver.switch_to.window(driver.window_handles[-1])  # Switch to the new tab
+    driver.switch_to.window(driver.window_handles[1])  # Switch to the new tab
     print("\nVTiger Logging in...")
     # If you want to debug the email, use the line below it 
     #print("Row by each row: " + each_row_email)
@@ -990,7 +990,7 @@ def vtiger_login(driver , vtiger_email , vtiger_pass,each_row_email,location):
                 print("Overall Result: Not accepted row (contains icons for person, namecard, or building but no comments)")
             elif has_comment_icon and not (has_person_icon or has_namecard_icon or has_building_icon):
                 print("Overall Result: Accepted row (contains comments only)")
-                ssm_login(driver)
+                driver.get('https://www.mysbusiness.com/search')
             elif has_comment_icon and (has_person_icon or has_namecard_icon or has_building_icon):
                 print("Overall Result: Not accepted row (contains both comments and other icons)")
             else:
@@ -999,7 +999,8 @@ def vtiger_login(driver , vtiger_email , vtiger_pass,each_row_email,location):
             print("Table or rows not found")
     else:
         print("Accepted row : No contact found on CRM")
-        ssm_login(driver)
+        driver.get('https://www.mysbusiness.com/search')
+        # then put the log in page again
     
     close_button = WebDriverWait(driver, 10).until(
         EC.element_to_be_clickable((By.XPATH, "//*[contains(@class, 'fa-times') and contains(@class, 'c-pointer')]"))
@@ -1021,20 +1022,23 @@ def vtiger_login(driver , vtiger_email , vtiger_pass,each_row_email,location):
     print("Switched back to the original tab.")
     
 
-def ssm_login(driver):
+def check_company_name(driver,locations):
     # Check the location and navigate to the corresponding URL
-    #if location_element == "Malaysia":
-        # If the location is Malaysia then go to malaysia business directory 
-    driver.execute_script("window.open('https://www.mysbusiness.com/search', '_blank');")
-    #elif location_element == "Singapore":
-        # If the location is Singapore then go to singapore business directory 
-    #    driver.execute_script("window.open('https://www.sgpbusiness.com/', '_blank');")
-    #else:
-    #    raise ValueError("Unsupported location: {}".format(location_element))
-    time.sleep(2)
-    driver.switch_to.window(driver.window_handles[-1])
-    time.sleep(2)
-    driver.switch_to.window(driver.window_handles[0])
+    driver.get('https://www.mysbusiness.com/search')
+     # Wait for the new tab to open
+    time.sleep(2)  # Ensure enough time for the new tab to appear
+    WebDriverWait(driver, 10).until(
+        EC.visibility_of_element_located((By.ID, "search_val"))
+    )
+
+    # Find the input element
+    input_element = driver.find_element(By.ID, "search_val")
+
+    # Enter text into the input field
+    input_element.send_keys("CADVSION")
+
+    # Optionally, submit the form if needed (e.g., pressing Enter)
+    input_element.send_keys(Keys.RETURN)
 
 def on_submit(root):
     work_email = workemail_entry.get()
