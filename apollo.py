@@ -990,6 +990,7 @@ def vtiger_login(driver , vtiger_email , vtiger_pass,each_row_email,location):
                 print("Overall Result: Not accepted row (contains icons for person, namecard, or building but no comments)")
             elif has_comment_icon and not (has_person_icon or has_namecard_icon or has_building_icon):
                 print("Overall Result: Accepted row (contains comments only)")
+                ssm_login(driver)
             elif has_comment_icon and (has_person_icon or has_namecard_icon or has_building_icon):
                 print("Overall Result: Not accepted row (contains both comments and other icons)")
             else:
@@ -997,7 +998,8 @@ def vtiger_login(driver , vtiger_email , vtiger_pass,each_row_email,location):
         except TimeoutException:
             print("Table or rows not found")
     else:
-        print("element found")
+        print("Accepted row : No contact found on CRM")
+        ssm_login(driver)
     
     close_button = WebDriverWait(driver, 10).until(
         EC.element_to_be_clickable((By.XPATH, "//*[contains(@class, 'fa-times') and contains(@class, 'c-pointer')]"))
@@ -1019,10 +1021,20 @@ def vtiger_login(driver , vtiger_email , vtiger_pass,each_row_email,location):
     print("Switched back to the original tab.")
     
 
-def ssm_login(driver, extract_company_name):
+def ssm_login(driver):
+    # Check the location and navigate to the corresponding URL
+    #if location_element == "Malaysia":
+        # If the location is Malaysia then go to malaysia business directory 
     driver.execute_script("window.open('https://www.mysbusiness.com/search', '_blank');")
-    driver.switch_to.window(driver.window_handles[2])
-    time.sleep(1000)
+    #elif location_element == "Singapore":
+        # If the location is Singapore then go to singapore business directory 
+    #    driver.execute_script("window.open('https://www.sgpbusiness.com/', '_blank');")
+    #else:
+    #    raise ValueError("Unsupported location: {}".format(location_element))
+    time.sleep(2)
+    driver.switch_to.window(driver.window_handles[-1])
+    time.sleep(2)
+    driver.switch_to.window(driver.window_handles[0])
 
 def on_submit(root):
     work_email = workemail_entry.get()
