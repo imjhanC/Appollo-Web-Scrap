@@ -679,7 +679,7 @@ def login_to_apollo(workemail, password, vtiger_email, vtiger_pass, num_leads):
         
         # Industry & Keywords
         industry_element = WebDriverWait(driver,10).until(
-            EC.visibility_of_element_located((By.XPATH, "//*[@id='main-app']/div[2]/div/div[2]/div/div/div/div[2]/div[2]/div[2]/div[1]/div/div/div[2]/div[8]/div/span/div[1]"))
+            EC.visibility_of_element_located((By.CSS_SELECTOR,"#main-app > div.zp_iqUL3 > div > div.zp_ANgUY > div > div > div > div.zp_ajhD0 > div.zp_p234g.zp_B0KRZ > div.zp_pxYrj > div.zp_FWOdG > div > div > div.zp_pDn5b.zp_T8qTB.zp_w3MDk > div:nth-child(8) > div > span > div.zp_YfgQq"))
         )
         driver.execute_script("arguments[0].scrollIntoView(true);", industry_element)
         industry_element.click()
@@ -696,7 +696,7 @@ def login_to_apollo(workemail, password, vtiger_email, vtiger_pass, num_leads):
         time.sleep(2)
         input_element_industries.send_keys(Keys.ENTER)
         industry_element = WebDriverWait(driver,10).until(
-            EC.visibility_of_element_located((By.XPATH, "//*[@id='main-app']/div[2]/div/div[2]/div/div/div/div[2]/div[2]/div[2]/div[1]/div/div/div[2]/div[8]/div/span/div[1]"))
+            EC.visibility_of_element_located((By.CSS_SELECTOR, "#main-app > div.zp_iqUL3 > div > div.zp_ANgUY > div > div > div > div.zp_ajhD0 > div.zp_p234g.zp_B0KRZ > div.zp_pxYrj > div.zp_FWOdG > div > div > div.zp_pDn5b.zp_T8qTB.zp_w3MDk > div:nth-child(8) > div > span > div.zp_YfgQq"))
         )
         driver.execute_script("arguments[0].scrollIntoView(true);", industry_element)
         industry_element.click()
@@ -891,12 +891,12 @@ def login_to_apollo(workemail, password, vtiger_email, vtiger_pass, num_leads):
         #if driver:
         #    driver.quit()
 
-def vtiger_login(driver , vtiger_email , vtiger_pass,each_row_email,locations):
+def vtiger_login(driver , vtiger_email , vtiger_pass,each_row_email,location):
     # Save the current window handle (original tab)
     original_tab = driver.current_window_handle
     driver.execute_script("window.open('https://crmaccess.vtiger.com/log-in/', '_blank');")
     time.sleep(2)  # Give some time for the tab to open
-    driver.switch_to.window(driver.window_handles[1])  # Switch to the new tab
+    driver.switch_to.window(driver.window_handles[-1])  # Switch to the new tab
     print("\nVTiger Logging in...")
     # If you want to debug the email, use the line below it 
     #print("Row by each row: " + each_row_email)
@@ -990,7 +990,8 @@ def vtiger_login(driver , vtiger_email , vtiger_pass,each_row_email,locations):
                 print("Overall Result: Not accepted row (contains icons for person, namecard, or building but no comments)")
             elif has_comment_icon and not (has_person_icon or has_namecard_icon or has_building_icon):
                 print("Overall Result: Accepted row (contains comments only)")
-                driver.get('https://www.mysbusiness.com/search')
+                with open("leads.txt", "a") as f:
+                    f.write(f"Overall Result: Accepted row (contains comments only)\n")
             elif has_comment_icon and (has_person_icon or has_namecard_icon or has_building_icon):
                 print("Overall Result: Not accepted row (contains both comments and other icons)")
             else:
@@ -999,8 +1000,8 @@ def vtiger_login(driver , vtiger_email , vtiger_pass,each_row_email,locations):
             print("Table or rows not found")
     else:
         print("Accepted row : No contact found on CRM")
-        driver.get('https://www.mysbusiness.com/search')
-        # then put the log in page again
+        with open("leads.txt", "a") as f:
+            f.write(f"Accepted row : No contact found on CRM\n")
     
     close_button = WebDriverWait(driver, 10).until(
         EC.element_to_be_clickable((By.XPATH, "//*[contains(@class, 'fa-times') and contains(@class, 'c-pointer')]"))
@@ -1021,24 +1022,6 @@ def vtiger_login(driver , vtiger_email , vtiger_pass,each_row_email,locations):
     # Original  is  driver.switch_to.window(original_tab)
     print("Switched back to the original tab.")
     
-
-def check_company_name(driver,locations):
-    # Check the location and navigate to the corresponding URL
-    driver.get('https://www.mysbusiness.com/search')
-     # Wait for the new tab to open
-    time.sleep(2)  # Ensure enough time for the new tab to appear
-    WebDriverWait(driver, 10).until(
-        EC.visibility_of_element_located((By.ID, "search_val"))
-    )
-
-    # Find the input element
-    input_element = driver.find_element(By.ID, "search_val")
-
-    # Enter text into the input field
-    input_element.send_keys("CADVSION")
-
-    # Optionally, submit the form if needed (e.g., pressing Enter)
-    input_element.send_keys(Keys.RETURN)
 
 def on_submit(root):
     work_email = workemail_entry.get()
