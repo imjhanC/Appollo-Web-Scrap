@@ -787,6 +787,7 @@ def login_to_apollo(workemail, password, vtiger_email, vtiger_pass, num_leads):
                     
                     # Extract text from each column
                     row_data = [column.text for column in columns]
+                    row_data_processed = (", ".join(row_data))
                     print(", ".join(row_data))  # Print full row data
                     
                     # Ensure there are enough columns to check the 4th one
@@ -828,7 +829,7 @@ def login_to_apollo(workemail, password, vtiger_email, vtiger_pass, num_leads):
                                     # Print the accepted row
                                     print(f"Accepted row (Access email updated): {', '.join(row_data)} >>> Clicked email address: {email_address}")
                                     # Uncomment and modify as needed:
-                                    vtiger_login(driver, vtiger_email, vtiger_pass, email_address,locations)
+                                    vtiger_login(driver, vtiger_email, vtiger_pass, email_address,locations,row_data_processed)
                                     current_leads += 1
                                 else:
                                     # If there is no email address even if the Access email button is clicked, ignore and proceed to the next row 
@@ -848,7 +849,7 @@ def login_to_apollo(workemail, password, vtiger_email, vtiger_pass, num_leads):
                         print(f"Accepted row (Email): {', '.join(row_data)}")
                         
                         # Uncomment and modify as needed:
-                        vtiger_login(driver, vtiger_email, vtiger_pass, email_address,locations)
+                        vtiger_login(driver, vtiger_email, vtiger_pass, email_address,locations,row_data_processed)
                         current_leads += 1
                     
                     elif fourth_column_text == "No email":
@@ -887,11 +888,12 @@ def login_to_apollo(workemail, password, vtiger_email, vtiger_pass, num_leads):
     except Exception as e:
         print(f"Error in login to Apollo part 1: {str(e)}")
     finally:
-        time.sleep(1250)
-        #if driver:
-        #    driver.quit()
+        for handle in driver.window_handles:
+            driver.switch_to.window(handle)  # Switch to the tab
+            driver.close()  # Close the current tab
 
-def vtiger_login(driver , vtiger_email , vtiger_pass,each_row_email,location):
+#
+def vtiger_login(driver , vtiger_email , vtiger_pass,each_row_email,location_user,row_data_processed):
     # Save the current window handle (original tab)
     original_tab = driver.current_window_handle
     driver.execute_script("window.open('https://crmaccess.vtiger.com/log-in/', '_blank');")
@@ -990,8 +992,28 @@ def vtiger_login(driver , vtiger_email , vtiger_pass,each_row_email,location):
                 print("Overall Result: Not accepted row (contains icons for person, namecard, or building but no comments)")
             elif has_comment_icon and not (has_person_icon or has_namecard_icon or has_building_icon):
                 print("Overall Result: Accepted row (contains comments only)")
+                row_counter = 0  # Initialize a counter outside the processing loop
+                # Process each row one at a time
                 with open("leads.txt", "a") as f:
-                    f.write(f"Overall Result: Accepted row (contains comments only)\n")
+                    # Increment the row counter
+                    row_counter += 1
+
+                    # Split the row into columns
+                    columns = row_data_processed.split(',')
+
+                    # Apply cleaning logic for rows except row 5
+                    if row_counter != 5:
+                        # Check if the last column contains a '+' and a number
+                        if len(columns) > 0 and columns[-1].strip().startswith('+') and columns[-1].strip()[1:].isdigit():
+                            columns[-1] = ""  # Remove the '+number' from the last column
+
+                    # Rejoin the columns and write to the file
+                    cleaned_row = ','.join(columns)
+
+                    if location_user:
+                        cleaned_row += f"{location_user}"  # Add a space before locations
+
+                    f.write(f"{cleaned_row}\n")
             elif has_comment_icon and (has_person_icon or has_namecard_icon or has_building_icon):
                 print("Overall Result: Not accepted row (contains both comments and other icons)")
             else:
@@ -1000,8 +1022,27 @@ def vtiger_login(driver , vtiger_email , vtiger_pass,each_row_email,location):
             print("Table or rows not found")
     else:
         print("Accepted row : No contact found on CRM")
+        row_counter = 0  # Initialize a counter outside the processing loop
+        # Process each row one at a time
         with open("leads.txt", "a") as f:
-            f.write(f"Accepted row : No contact found on CRM\n")
+            # Increment the row counter
+            row_counter += 1
+
+            # Split the row into columns
+            columns = row_data_processed.split(',')
+
+            # Apply cleaning logic for rows except row 5
+            if row_counter != 5:
+                # Check if the last column contains a '+' and a number
+                if len(columns) > 0 and columns[-1].strip().startswith('+') and columns[-1].strip()[1:].isdigit():
+                    columns[-1] = ""  # Remove the '+number' from the last column
+
+            # Rejoin the columns and write to the file
+            cleaned_row = ','.join(columns)
+            if location_user:
+                cleaned_row += f"{location_user}"  # Add a space before locations
+
+            f.write(f"{cleaned_row}\n")
     
     close_button = WebDriverWait(driver, 10).until(
         EC.element_to_be_clickable((By.XPATH, "//*[contains(@class, 'fa-times') and contains(@class, 'c-pointer')]"))

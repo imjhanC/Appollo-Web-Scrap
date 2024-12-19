@@ -1,3 +1,8 @@
-Accepted row : No contact found on CRM
-Accepted row : No contact found on CRM
-Accepted row : No contact found on CRM
+Ken Teh, Engineer, Kawan Engineering Sdn Bhd, ken@kawanengineering.com.my, +6052913840, , , Federal Territory of Kuala Lumpur, Malaysia, 50, Machinery, N/A, ['Malaysia']
+Sheau Rou, Engineer, Daikin Malaysia Sdn Bhd, sheau.rou@daikinmalaysia.com, Request Mobile Number, , , Subang Jaya, Malaysia, 1.1K, Machinery, air conditioning & refrigeration, ['Malaysia']
+Asmadianatasha Asmanizam, Engineer, Daikin Malaysia Sdn Bhd, asmadianatasha.asmanizam@daikinmalaysia.com, Request Mobile Number, , , George Town, Malaysia, 1.1K, Machinery, air conditioning & refrigeration, ['Malaysia']
+Li Chong, Engineer, Press Metal Sarawak Sdn Bhd, li@pressmetal.com, Request Mobile Number, , , Malacca, Malaysia, 140, Machinery, N/A, ['Malaysia']
+Wan Haron, Engineer, Inokom Corporation Sdn. Bhd., wan@inokom.com.my, +6044031888, , , Kulim, Malaysia, 500, Machinery, N/A, ['Malaysia']
+Izzhan Nasir, Engineer, Excel Fire Engineering Sdn Bhd, izzhan@excelfire.com.my, Request Mobile Number, , , Malacca, Malaysia, 36, Machinery, N/A, ['Malaysia']
+Valerie Chow, Engineer, Daikin Malaysia Sdn Bhd, valerie.chow@daikinmalaysia.com, Request Mobile Number, , , Kuala Lumpur, Malaysia, 1.1K, Machinery, air conditioning & refrigeration, ['Malaysia']
+Hirreish Rajendran, Engineer, JJ-Lurgi, hirreish_rajendran@jjsea.com, +6563053888, , , Selangor, Malaysia, 200, Machinery, edible oil refining, ['Malaysia']
