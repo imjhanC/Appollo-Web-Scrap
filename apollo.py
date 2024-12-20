@@ -689,12 +689,17 @@ def login_to_apollo(workemail, password, vtiger_email, vtiger_pass, num_leads):
         )
         placeholder_element_industries.click()
         time.sleep(3)
-        input_element_industries = WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.CLASS_NAME, "Select-input"))
-        )
-        input_element_industries.send_keys(industries)
-        time.sleep(2)
-        input_element_industries.send_keys(Keys.ENTER)
+
+        # Input each keywords ( Industries ) one by one
+        for industry in industries:
+            input_element_industries = WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.CLASS_NAME, "Select-input"))
+            )
+            input_element_industries.send_keys(industry)
+            time.sleep(1)
+            input_element_industries.send_keys(Keys.ENTER)
+            time.sleep(1)
+
         industry_element = WebDriverWait(driver,10).until(
             EC.visibility_of_element_located((By.CSS_SELECTOR, "#main-app > div.zp_iqUL3 > div > div.zp_ANgUY > div > div > div > div.zp_ajhD0 > div.zp_p234g.zp_B0KRZ > div.zp_pxYrj > div.zp_FWOdG > div > div > div.zp_pDn5b.zp_T8qTB.zp_w3MDk > div:nth-child(8) > div > span > div.zp_YfgQq"))
         )
@@ -713,13 +718,15 @@ def login_to_apollo(workemail, password, vtiger_email, vtiger_pass, num_leads):
         )
         placeholder_element.click()  # Click the placeholder
         time.sleep(2)
-        job_title_input = WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.CSS_SELECTOR, "input.Select-input"))
-        )
-        time.sleep(2)
-        job_title_input.send_keys(job_titles)
-        time.sleep(1)
-        job_title_input.send_keys(Keys.RETURN)
+
+        for job_title in job_titles:
+            job_title_input = WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, "input.Select-input"))
+            )
+            time.sleep(1)
+            job_title_input.send_keys(job_title)
+            time.sleep(1)
+            job_title_input.send_keys(Keys.RETURN)
 
         job_titles_element = WebDriverWait(driver, 10).until(
             EC.element_to_be_clickable((By.CSS_SELECTOR, "#main-app > div.zp_iqUL3 > div > div.zp_ANgUY > div > div > div > div.zp_ajhD0 > div.zp_p234g.zp_B0KRZ > div.zp_pxYrj > div.zp_FWOdG > div > div > div.zp_pDn5b.zp_T8qTB.zp_w3MDk > div:nth-child(4) > div > span > div.zp_YfgQq > span"))
@@ -737,12 +744,15 @@ def login_to_apollo(workemail, password, vtiger_email, vtiger_pass, num_leads):
             EC.element_to_be_clickable((By.CLASS_NAME, "Select-placeholder"))
         )
         placeholder_element.click()
-        input_element = WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.CLASS_NAME, "Select-input"))
-        )
-        input_element.send_keys(locations)
-        time.sleep(2)
-        input_element.send_keys(Keys.RETURN)
+        for location in locations:
+            input_element = WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.CLASS_NAME, "Select-input"))
+            )
+            time.sleep(1)
+            input_element.send_keys(location)
+            time.sleep(1)
+            input_element.send_keys(Keys.RETURN)
+
         location_element = WebDriverWait(driver,10).until(
             EC.element_to_be_clickable((By.CSS_SELECTOR, "#main-app > div.zp_iqUL3 > div > div.zp_ANgUY > div > div > div > div.zp_ajhD0 > div.zp_p234g.zp_B0KRZ > div.zp_pxYrj > div.zp_FWOdG > div > div > div.zp_pDn5b.zp_T8qTB.zp_w3MDk > div:nth-child(6) > div > span > div.zp_YfgQq > span"))
         )
@@ -763,10 +773,11 @@ def login_to_apollo(workemail, password, vtiger_email, vtiger_pass, num_leads):
 
         # Initialize the lead processing
         target_leads = int(num_leads)
-        current_leads = 0
+        successful_leads = 0  # Track only successful lead processing
         page_num = 1
+        all_leads = 0 # Track all row that has bot failed and successful leads
 
-        while current_leads < target_leads:
+        while successful_leads < target_leads:
             try:
                 # Wait for the target div containing rows
                 target_div = WebDriverWait(driver, 10).until(
@@ -779,7 +790,7 @@ def login_to_apollo(workemail, password, vtiger_email, vtiger_pass, num_leads):
                 print(f"Processing rows on Page {page_num}:")
                 for i, row in enumerate(rows):
                     # Check if we've processed the desired number of leads
-                    if current_leads >= target_leads:
+                    if successful_leads >= target_leads:
                         break
 
                     # Locate all columns within the current row
@@ -788,23 +799,44 @@ def login_to_apollo(workemail, password, vtiger_email, vtiger_pass, num_leads):
                     # Extract text from each column
                     row_data = [column.text for column in columns]
                     row_data_processed = (", ".join(row_data))
-                    print(", ".join(row_data))  # Print full row data
+                    print(f"Processing row: {', '.join(row_data)}")
                     
-                    # Ensure there are enough columns to check the 4th one
+                    # Skip if not enough columns
                     if len(columns) < 4:
-                        # If row is skipped, add 1 to continue searching for leads
+                        print("Skipping: Insufficient columns")
                         continue
                     
                     # Extract text from the 4th column
                     fourth_column_text = columns[3].text.strip()
                     
-                    # Check if the 4th column's text exists in emails_json
+                    # Skip if email already processed
                     if fourth_column_text in emails:
-                        print(f"Skipping row (Already processed): {', '.join(row_data)}")
+                        print(f"Skipping: Already processed - {fourth_column_text}")
+                        all_leads += 1
+                        row_counter = 0  # Initialize a counter outside the processing loop
+                        # Process each row one at a time
+                        with open("rejected_leads_with_email.txt", "a") as f:
+                            # Increment the row counter
+                            row_counter += 1
+
+                            # Split the row into columns
+                            columns = row_data_processed.split(',')
+
+                            # Apply cleaning logic for rows except row 5
+                            if row_counter != 5:
+                                # Check if the last column contains a '+' and a number
+                                if len(columns) > 0 and columns[-1].strip().startswith('+') and columns[-1].strip()[1:].isdigit():
+                                    columns[-1] = ""  # Remove the '+number' from the last column
+
+                            # Rejoin the columns and write to the file
+                            cleaned_row = ','.join(columns)
+                            f.write(f"{cleaned_row}\n")
                         continue
                     
+                    email_processed = False  # Flag to track if this row resulted in a successful lead
+                    
+                    # Handle "Access email" case
                     if fourth_column_text == "Access email":
-                        # Locate the "Access email" button for the current row
                         access_email_buttons = row.find_elements(
                             By.XPATH,
                             ".//button[contains(@class, 'zp_qe0Li') and .//span[text()='Access email']]"
@@ -820,49 +852,101 @@ def login_to_apollo(workemail, password, vtiger_email, vtiger_pass, num_leads):
                                 fourth_column_text = columns[3].text.strip()
                                 email_address = fourth_column_text.split('+')[0].strip()
 
-                                # Verify whether the text is an email even when the Access email is clicked
                                 if '@' in email_address and '.' in email_address:
-                                    # Save the updated text into tracking.txt
                                     with open("tracking.txt", "a") as f:
                                         f.write(f"{email_address}\n")
-                                
-                                    # Print the accepted row
-                                    print(f"Accepted row (Access email updated): {', '.join(row_data)} >>> Clicked email address: {email_address}")
-                                    # Uncomment and modify as needed:
-                                    vtiger_login(driver, vtiger_email, vtiger_pass, email_address,locations,row_data_processed)
-                                    current_leads += 1
+                                    
+                                    print(f"Success: Access email updated - {email_address}")
+                                    email_processed = vtiger_login(driver, vtiger_email, vtiger_pass, email_address, locations, row_data_processed)
+                                    all_leads += 1
                                 else:
-                                    # If there is no email address even if the Access email button is clicked, ignore and proceed to the next row 
+                                    # If even the Access email button is clicked , then there is no email (Skipping this row)
+                                    all_leads += 1
+                                    row_counter = 0  # Initialize a counter outside the processing loop
+                                    # Process each row one at a time
+                                    with open("rejected_leads.txt", "a") as f:
+                                        # Increment the row counter
+                                        row_counter += 1
+
+                                        # Split the row into columns
+                                        columns = row_data_processed.split(',')
+
+                                        # Apply cleaning logic for rows except row 5
+                                        if row_counter != 5:
+                                            # Check if the last column contains a '+' and a number
+                                            if len(columns) > 0 and columns[-1].strip().startswith('+') and columns[-1].strip()[1:].isdigit():
+                                                columns[-1] = ""  # Remove the '+number' from the last column
+
+                                        # Rejoin the columns and write to the file
+                                        cleaned_row = ','.join(columns)
+                                        f.write(f"{cleaned_row}\n")
                                     continue
-                    
+                        
+                    # If the button is Save contact
                     elif fourth_column_text == "Save contact":
-                        # Ignore this row and continue to the next
+                        all_leads += 1
+                        print(f"Skipping: Save contact button")
+                        row_counter = 0  # Initialize a counter outside the processing loop
+                        # Process each row one at a time
+                        with open("rejected_leads.txt", "a") as f:
+                            # Increment the row counter
+                            row_counter += 1
+
+                            # Split the row into columns
+                            columns = row_data_processed.split(',')
+
+                            # Apply cleaning logic for rows except row 5
+                            if row_counter != 5:
+                                # Check if the last column contains a '+' and a number
+                                if len(columns) > 0 and columns[-1].strip().startswith('+') and columns[-1].strip()[1:].isdigit():
+                                    columns[-1] = ""  # Remove the '+number' from the last column
+
+                            # Rejoin the columns and write to the file
+                            cleaned_row = ','.join(columns)
+                            f.write(f"{cleaned_row}\n")
+                        continue
+
+                    # If the button is No email
+                    elif fourth_column_text == "No email":
+                        all_leads += 1
+                        print(f"Skipping: No email button")
+                        row_counter = 0  # Initialize a counter outside the processing loop
+                        # Process each row one at a time
+                        with open("rejected_leads.txt", "a") as f:
+                            # Increment the row counter
+                            row_counter += 1
+
+                            # Split the row into columns
+                            columns = row_data_processed.split(',')
+
+                            # Apply cleaning logic for rows except row 5
+                            if row_counter != 5:
+                                # Check if the last column contains a '+' and a number
+                                if len(columns) > 0 and columns[-1].strip().startswith('+') and columns[-1].strip()[1:].isdigit():
+                                    columns[-1] = ""  # Remove the '+number' from the last column
+
+                            # Rejoin the columns and write to the file
+                            cleaned_row = ','.join(columns)
+                            f.write(f"{cleaned_row}\n")
                         continue
                     
+                    # Handle direct email case
                     elif "@" in fourth_column_text:
                         email_address = fourth_column_text.split('+')[0].strip()
-                        # Save email into tracking.txt
                         with open("tracking.txt", "a") as f:
                             f.write(f"{email_address}\n")
                         
-                        # Print the accepted row
-                        print(f"Accepted row (Email): {', '.join(row_data)}")
-                        
-                        # Uncomment and modify as needed:
-                        vtiger_login(driver, vtiger_email, vtiger_pass, email_address,locations,row_data_processed)
-                        current_leads += 1
+                        print(f"Success: Direct email - {email_address}")
+                        email_processed = vtiger_login(driver, vtiger_email, vtiger_pass, email_address, locations, row_data_processed)
+                        all_leads += 1
                     
-                    elif fourth_column_text == "No email":
-                        # Ignore this row and continue to the next
-                        continue
-
-                    # If there is nothing matching all 5 criteria then ignore 
-                    else:
-                        continue
+                    # Only increment successful_leads if we actually processed an email
+                    if email_processed:
+                        successful_leads += 1
+                        print(f"Progress: {successful_leads}/{target_leads} Successful leads processed")
 
                 # Check if we need to go to the next page
-                if current_leads < target_leads:
-                    # Try to find and click the next page button
+                if successful_leads < target_leads:
                     try:
                         next_page_button = driver.find_element(
                             By.XPATH, 
@@ -872,7 +956,6 @@ def login_to_apollo(workemail, password, vtiger_email, vtiger_pass, num_leads):
                         time.sleep(3)  # Wait for the page to load
                         page_num += 1
                     except NoSuchElementException:
-                        # No more pages available
                         print("Reached the last page. Cannot find more leads.")
                         break
 
@@ -882,32 +965,35 @@ def login_to_apollo(workemail, password, vtiger_email, vtiger_pass, num_leads):
 
         # Print final lead processing summary
         print(f"\nLead Processing Summary:")
-        print(f"Initial Leads Requested: {target_leads}")
-        print(f"Leads Processed: {current_leads}")
+        print(f"Target Leads ( User Defined ): {target_leads}")
+        print(f"Successful Leads Processed: {successful_leads}")
+        print(f"Skipped or Failed Leads Processed: {all_leads - successful_leads}")
+        print(f"All Leads Processed {all_leads}")
         print(f"Total Pages Processed: {page_num}")
+        
+        # Alert if we couldn't find enough leads
+        if successful_leads < target_leads:
+            print(f"Warning: Could only process {successful_leads} leads out of {target_leads} requested.")
     except Exception as e:
         print(f"Error in login to Apollo part 1: {str(e)}")
     finally:
-        for handle in driver.window_handles:
-            driver.switch_to.window(handle)  # Switch to the tab
-            driver.close()  # Close the current tab
+        #for handle in driver.window_handles:
+        #    driver.switch_to.window(handle)  # Switch to the tab
+        #    driver.close()  # Close the current tab
+        time.sleep(1500)
 
 #
 def vtiger_login(driver , vtiger_email , vtiger_pass,each_row_email,location_user,row_data_processed):
     # Save the current window handle (original tab)
     original_tab = driver.current_window_handle
+    email_processed = False # Initialize the flag 
+
     driver.execute_script("window.open('https://crmaccess.vtiger.com/log-in/', '_blank');")
     time.sleep(2)  # Give some time for the tab to open
     driver.switch_to.window(driver.window_handles[-1])  # Switch to the new tab
     print("\nVTiger Logging in...")
     # If you want to debug the email, use the line below it 
     #print("Row by each row: " + each_row_email)
-    email_field = WebDriverWait(driver, 10).until(
-        EC.presence_of_element_located((By.NAME, "username"))
-    )
-    password_field = WebDriverWait(driver, 10).until(
-        EC.presence_of_element_located((By.NAME, "password"))
-    )
     email_field = WebDriverWait(driver, 10).until(
         EC.presence_of_element_located((By.NAME, "username"))
     )
@@ -950,6 +1036,7 @@ def vtiger_login(driver , vtiger_email , vtiger_pass,each_row_email,location_use
         EC.presence_of_element_located((By.XPATH, checkbox_xpath))
     )
     checkbox.click()
+    
     try:
         # Check the not found XPATH div ( This XPATH is for the not found XPATH div )
         target_xpath = "//*[@id='Global_Search_Display_Modal___BV_modal_body_']/div[2]"
@@ -990,9 +1077,29 @@ def vtiger_login(driver , vtiger_email , vtiger_pass,each_row_email,location_use
             # Evaluate the overall condition based on flags
             if (has_person_icon or has_namecard_icon or has_building_icon) and not has_comment_icon:
                 print("Overall Result: Not accepted row (contains icons for person, namecard, or building but no comments)")
+                row_counter = 0  # Initialize a counter outside the processing loop
+                # Process each row one at a time
+                with open("rejected_leads_with_email.txt", "a") as f:
+                    # Increment the row counter
+                    row_counter += 1
+
+                    # Split the row into columns
+                    columns = row_data_processed.split(',')
+
+                    # Apply cleaning logic for rows except row 5
+                    if row_counter != 5:
+                        # Check if the last column contains a '+' and a number
+                        if len(columns) > 0 and columns[-1].strip().startswith('+') and columns[-1].strip()[1:].isdigit():
+                            columns[-1] = ""  # Remove the '+number' from the last column
+
+                    # Rejoin the columns and write to the file
+                    cleaned_row = ','.join(columns)
+                    f.write(f"{cleaned_row}\n")
+
             elif has_comment_icon and not (has_person_icon or has_namecard_icon or has_building_icon):
                 print("Overall Result: Accepted row (contains comments only)")
                 row_counter = 0  # Initialize a counter outside the processing loop
+                email_processed = True
                 # Process each row one at a time
                 with open("leads.txt", "a") as f:
                     # Increment the row counter
@@ -1016,6 +1123,24 @@ def vtiger_login(driver , vtiger_email , vtiger_pass,each_row_email,location_use
                     f.write(f"{cleaned_row}\n")
             elif has_comment_icon and (has_person_icon or has_namecard_icon or has_building_icon):
                 print("Overall Result: Not accepted row (contains both comments and other icons)")
+                row_counter = 0  # Initialize a counter outside the processing loop
+                # Process each row one at a time
+                with open("rejected_leads_with_email.txt", "a") as f:
+                    # Increment the row counter
+                    row_counter += 1
+
+                    # Split the row into columns
+                    columns = row_data_processed.split(',')
+
+                    # Apply cleaning logic for rows except row 5
+                    if row_counter != 5:
+                        # Check if the last column contains a '+' and a number
+                        if len(columns) > 0 and columns[-1].strip().startswith('+') and columns[-1].strip()[1:].isdigit():
+                            columns[-1] = ""  # Remove the '+number' from the last column
+
+                    # Rejoin the columns and write to the file
+                    cleaned_row = ','.join(columns)
+                    f.write(f"{cleaned_row}\n")
             else:
                 print("Overall Result: Unclear criteria")
         except TimeoutException:
@@ -1023,6 +1148,7 @@ def vtiger_login(driver , vtiger_email , vtiger_pass,each_row_email,location_use
     else:
         print("Accepted row : No contact found on CRM")
         row_counter = 0  # Initialize a counter outside the processing loop
+        email_processed = True
         # Process each row one at a time
         with open("leads.txt", "a") as f:
             # Increment the row counter
@@ -1062,6 +1188,7 @@ def vtiger_login(driver , vtiger_email , vtiger_pass,each_row_email,location_use
     driver.switch_to.window(driver.window_handles[0])
     # Original  is  driver.switch_to.window(original_tab)
     print("Switched back to the original tab.")
+    return email_processed
     
 
 def on_submit(root):
@@ -1069,8 +1196,6 @@ def on_submit(root):
     password = password_entry.get()
     vtiger_email_entry = vtiger_email.get()
     vtiger_password_entry = vtiger_password.get()
-    ssm_email_entry = ssm_email.get()
-    ssm_password_entry = ssm_password.get()
     num =  num_leads.get() # Number of leads 
 
     if not work_email or not password:
@@ -1093,8 +1218,8 @@ def apollo_login():
     root_apollo.title("Enter Account Credentials")
     
     # Window size and positioning
-    window_width = 900
-    window_height = 600
+    window_width = 600
+    window_height = 400
     screen_width = root_apollo.winfo_screenwidth()
     screen_height = root_apollo.winfo_screenheight()
     x_position = (screen_width - window_width) // 2
@@ -1135,7 +1260,7 @@ def apollo_login():
     eye_button_apollo.bind("<ButtonRelease-1>", lambda event: hide_password(event, password_entry))  # Hide password
 
     # VTiger Email and Password
-    ttk.Label(frm, text="Linkedin account credential", font=bold_font).grid(column=0, row=3, columnspan=2, pady=(20, 10), sticky="w")
+    ttk.Label(frm, text="VTiger account credential", font=bold_font).grid(column=0, row=3, columnspan=2, pady=(20, 10), sticky="w")
     ttk.Label(frm, text="VTiger Email:").grid(column=0, row=4, sticky="w", padx=10, pady=5)
     global vtiger_email
     vtiger_email = ttk.Entry(frm, width=50)
@@ -1153,30 +1278,13 @@ def apollo_login():
     eye_button_linkedin.bind("<ButtonRelease-1>", lambda event: hide_password(event, vtiger_password))  # Hide password
     
     # For SSM
-    ttk.Label(frm, text="SSM account credential", font=bold_font).grid(column=0, row=6, columnspan=2, pady=(20, 10), sticky="w")
-    ttk.Label(frm, text="SSM Email:").grid(column=0, row=7, sticky="w", padx=10, pady=5)
-    global ssm_email
-    ssm_email = ttk.Entry(frm, width=50)
-    ssm_email.grid(column=1, row=7, padx=10, pady=5, sticky="w")
-    
-    ttk.Label(frm, text="SSM Password:").grid(column=0, row=8, sticky="w", padx=10, pady=5)
-    global ssm_password
-    ssm_password = ttk.Entry(frm, width=50, show="*")
-    ssm_password.grid(column=1, row=8, padx=10, pady=(15,20), sticky="w")
-
-    # Eye button for SSM password
-    eye_button_ssm = ttk.Button(frm, text="👁")
-    eye_button_ssm.grid(column=2, row=8, pady=5, padx=5, sticky="w")
-    eye_button_ssm.bind("<ButtonPress-1>", lambda event: show_password(event, ssm_password))  # Show password
-    eye_button_ssm.bind("<ButtonRelease-1>", lambda event: hide_password(event, ssm_password))  # Hide password
-    
-    ttk.Label(frm, text="Enter number of leads you want to search", font=bold_font).grid(column=0, row=9, columnspan=2, pady=(0,0), sticky="w")
-    ttk.Label(frm, text="Number of lead(s):").grid(column=0,row=10, sticky="w", padx=10 ,pady=5)
+    ttk.Label(frm, text="Enter number of leads you want to search", font=bold_font).grid(column=0, row=8, columnspan=2, pady=(0,0), sticky="w")
+    ttk.Label(frm, text="Number of lead(s):").grid(column=0,row=9, sticky="w", padx=10 ,pady=5)
     global num_leads
     num_leads = ttk.Entry(frm, width=50)
-    num_leads.grid(column=1,row=10, padx=10, pady=(0,0), sticky="w")
+    num_leads.grid(column=1,row=9, padx=10, pady=(0,0), sticky="w")
     # Login button
-    ttk.Button(frm, text="Login", command=lambda: on_submit(root_apollo)).grid(column=0, row=11, columnspan=3, pady=20)
+    ttk.Button(frm, text="Login", command=lambda: on_submit(root_apollo)).grid(column=0, row=10, columnspan=3, pady=20)
 
     root_apollo.mainloop() 
 
