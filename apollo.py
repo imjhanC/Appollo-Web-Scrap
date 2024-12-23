@@ -10,6 +10,7 @@ import time
 import pickle
 import tkinter.font as tkfont
 from PIL import Image, ImageTk 
+import pandas as pd
 import undetected_chromedriver as uc
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
@@ -22,6 +23,7 @@ from selenium.common.exceptions import TimeoutException, NoSuchElementException 
 from selenium.common.exceptions import ElementNotInteractableException, StaleElementReferenceException, WebDriverException, ElementClickInterceptedException
 from tkinter import Tk, Text, Button, BOTH, LEFT, RIGHT, Y, END, VERTICAL, HORIZONTAL
 from selenium.webdriver.support.expected_conditions import staleness_of
+from selenium import webdriver
 
 # This is the class for display how many seconds left for the user to enter the 2FA code via authenticator (multithreading)
 class TwoFactorCountdown:
@@ -963,26 +965,214 @@ def login_to_apollo(workemail, password, vtiger_email, vtiger_pass, num_leads):
                 print(f"Error processing page {page_num}: {e}")
                 break
 
-        # Print final lead processing summary
-        print(f"\nLead Processing Summary:")
-        print(f"Target Leads ( User Defined ): {target_leads}")
-        print(f"Successful Leads Processed: {successful_leads}")
-        print(f"Skipped or Failed Leads Processed: {all_leads - successful_leads}")
-        print(f"All Leads Processed {all_leads}")
-        print(f"Total Pages Processed: {page_num}")
-        
         # Alert if we couldn't find enough leads
         if successful_leads < target_leads:
             print(f"Warning: Could only process {successful_leads} leads out of {target_leads} requested.")
     except Exception as e:
         print(f"Error in login to Apollo part 1: {str(e)}")
     finally:
+        driver.quit()
+        # List of files to process
+        files_to_process = [
+            'leads.txt',
+            'rejected_leads.txt',
+            'rejected_leads_with_email.txt'
+        ]
+        process_leads_files(files_to_process)
+        check_detail_company_name("leads.txt")
+
+        txt_file = "leads.txt"  # Path to the text file
+        excel_file = "leads.xlsx"  # Desired output Excel file path
+
+        txt_to_excel(txt_file, excel_file)
+        driver.quit()
+
+        message = f"\nLead Processing Summary:\n"
+        message += f"Target Leads (User Defined): {target_leads}\n"
+        message += f"Successful Leads Processed: {successful_leads}\n"
+        message += f"Skipped or Failed Leads Processed: {all_leads - successful_leads}\n"
+        message += f"All Leads Processed: {all_leads}\n"
+        message += f"Total Pages Processed: {page_num}"
+        root = tk.Tk()  # Create a root window
+        root.withdraw()  # Hide the root window
+        messagebox.showinfo("Lead Processing Summary", message)
+        root.quit()  # Close the root window
         #for handle in driver.window_handles:
         #    driver.switch_to.window(handle)  # Switch to the tab
         #    driver.close()  # Close the current tab
-        time.sleep(1500)
 
-#
+# This function is to transform textfile to excel file 
+def txt_to_excel(txt_file, excel_file):
+    try:
+        # Try reading the file, handle inconsistent columns
+        df = pd.read_csv(txt_file, sep=',', header=None, on_bad_lines='skip')  # Skip bad lines
+
+        # Define headers manually (you can adjust these based on your data)
+        headers = [
+            'Name', 'Position', 'Company', 'Email', 'Phone',
+            'City', 'Country', 'Extracted Company Name'
+        ]
+        
+        # Assign headers to the DataFrame
+        df.columns = headers
+        
+        # Check if the output Excel file already exists
+        try:
+            existing_df = pd.read_excel(excel_file, engine='openpyxl')
+            # Append new data to the existing DataFrame
+            df = existing_df.append(df, ignore_index=True)
+        except FileNotFoundError:
+            # If the file doesn't exist, it's the first time creating it
+            pass
+        
+        # Write the DataFrame to Excel
+        df.to_excel(excel_file, index=False, engine='openpyxl')
+
+        print(f"Successfully converted {txt_file} to {excel_file} with headers")
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
+# This function is to extract all the possible company names 
+def check_detail_company_name(file_path):
+    def initialize_driver():
+        options = Options()
+        options.add_argument("--start-maximized")
+        driver = webdriver.Chrome(options=options)
+        return driver
+
+    def search_and_extract(driver, url, search_value, result_selector):
+        driver.get(url)  # Navigate to the URL
+        search_input = driver.find_element(By.ID, "search_val")  # Locate search input field
+        search_input.clear()  # Clear any previous value
+        search_input.send_keys(search_value)  # Enter the search value
+        search_input.send_keys(Keys.RETURN)  # Hit Enter to submit the search
+        time.sleep(3)  # Wait for results to load
+
+        # Extract results
+        results = driver.find_elements(By.CSS_SELECTOR, result_selector)
+        return [result.text.strip() for result in results]
+
+    try:
+        driver = initialize_driver()
+
+        with open(file_path, "r") as f:
+            rows = f.readlines()
+            processed_rows = []
+
+            for row in rows:
+                row = row.strip()  # Remove leading/trailing whitespace
+                if not row:
+                    continue  # Skip empty rows
+
+                columns = row.split(',')
+
+                # Determine the URL and search logic based on the last column
+                search_value = columns[2].strip()  # Use the third column for the search value
+                if columns[-1].strip() == 'Singapore':
+                    print(f"Performing search on https://www.sgpbusiness.com/ for: {search_value}")
+                    results = search_and_extract(driver, "https://www.sgpbusiness.com/", search_value, "h6.list-group-item-heading.mb-0")
+                else:
+                    print(f"Performing search on https://www.mysbusiness.com/ for: {search_value}")
+                    results = search_and_extract(driver, "https://www.mysbusiness.com/", search_value, "h4.list-group-item-heading")
+
+                # Join multiple results with a hyphen
+                concatenated_results = "-".join(results)
+
+                # Ensure results are appended to the last column
+                if columns[-1].strip():
+                    columns[-1] += f",{concatenated_results}"
+                else:
+                    columns[-1] = concatenated_results
+
+                # Rejoin the columns into a single row
+                cleaned_row = ','.join(columns)
+                processed_rows.append(cleaned_row)
+
+        # Clear the file and write all processed rows back
+        with open(file_path, "w") as out_file:
+            out_file.write("\n".join(processed_rows) + "\n")
+
+        # Optionally print processed rows for debugging
+        for processed_row in processed_rows:
+            print(f"Processed row: {processed_row}")
+
+    except FileNotFoundError:
+        print(f"File '{file_path}' not found.")
+    except Exception as e:
+        print(f"An error occurred: {e}")
+    finally:
+        driver.quit()  # Ensure the browser is closed at the end
+
+
+# This fucntion is to for data processing for 
+def process_leads_files(file_paths):
+    """
+    Process multiple leads files and clean their data.
+    
+    Args:
+        file_paths (list): List of file paths to process
+    """
+    def clean_data(input_text):
+        # Split into lines and initialize variables
+        lines = input_text.strip().split('\n')
+        cleaned_rows = []
+        current_row = []
+        
+        # Merge split rows
+        for line in lines:
+            if not line.strip():
+                continue
+                
+            if ',' in line and 'Engineer' in line.split(',')[1].strip():
+                if current_row:
+                    cleaned_rows.append(' '.join(current_row))
+                current_row = [line]
+            else:
+                current_row.append(line)
+        
+        if current_row:
+            cleaned_rows.append(' '.join(current_row))
+        
+        # Process each row to remove specified columns
+        final_rows = []
+        for row in cleaned_rows:
+            columns = row.split(',')
+            
+            # Clean up the 4th column (email/phone) - remove +number
+            if len(columns) > 3:
+                columns[3] = columns[3].split('+')[0].strip()
+            
+            # Keep only the desired columns
+            kept_columns = []
+            for i, col in enumerate(columns):
+                if i <= 4 or i in [7, 8] or i == 12:
+                    kept_columns.append(col.strip())
+            
+            final_rows.append(','.join(kept_columns))
+        
+        return final_rows
+    
+    # Process each file
+    for file_path in file_paths:
+        try:
+            # Read input file
+            with open(file_path, 'r') as file:
+                input_text = file.read()
+            
+            # Clean the data
+            cleaned_data = clean_data(input_text)
+            
+            # Write back to the same file
+            with open(file_path, 'w') as file:
+                for row in cleaned_data:
+                    file.write(row + '\n')
+            
+            print(f"Successfully processed: {file_path}")
+            
+        except Exception as e:
+            print(f"Error processing {file_path}: {str(e)}")
+
+
 def vtiger_login(driver , vtiger_email , vtiger_pass,each_row_email,location_user,row_data_processed):
     # Save the current window handle (original tab)
     original_tab = driver.current_window_handle
@@ -1117,9 +1307,6 @@ def vtiger_login(driver , vtiger_email , vtiger_pass,each_row_email,location_use
                     # Rejoin the columns and write to the file
                     cleaned_row = ','.join(columns)
 
-                    if location_user:
-                        cleaned_row += f"{location_user}"  # Add a space before locations
-
                     f.write(f"{cleaned_row}\n")
             elif has_comment_icon and (has_person_icon or has_namecard_icon or has_building_icon):
                 print("Overall Result: Not accepted row (contains both comments and other icons)")
@@ -1165,9 +1352,6 @@ def vtiger_login(driver , vtiger_email , vtiger_pass,each_row_email,location_use
 
             # Rejoin the columns and write to the file
             cleaned_row = ','.join(columns)
-            if location_user:
-                cleaned_row += f"{location_user}"  # Add a space before locations
-
             f.write(f"{cleaned_row}\n")
     
     close_button = WebDriverWait(driver, 10).until(
