@@ -627,7 +627,7 @@ def login_to_apollo(workemail, password, vtiger_email, vtiger_pass, num_leads):
         options.add_argument("--start-minimized")  # Or remove if testing in non-headless mode
         options.add_argument("--disable-blink-features=AutomationControlled")
         #options.add_argument("--disable-blink-features=AutomationControlled")
-
+        options.add_argument('--disable-popup-blocking')
         print("Initializing Chrome...")
         driver = uc.Chrome(options=options)
 
@@ -809,15 +809,16 @@ def login_to_apollo(workemail, password, vtiger_email, vtiger_pass, num_leads):
                         continue
                     
                     # Extract text from the 4th column
-                    fourth_column_text = columns[3].text.strip()
+                    fourth_column = columns[3].text.strip()
+                    fourth_column_text = re.sub(r'\+\d+', '', fourth_column).strip()
                     
                     # Skip if email already processed
-                    if fourth_column_text in emails:
+                    if fourth_column_text in emails_json:
                         print(f"Skipping: Already processed - {fourth_column_text}")
                         all_leads += 1
                         row_counter = 0  # Initialize a counter outside the processing loop
                         # Process each row one at a time
-                        with open("rejected_leads_with_email.txt", "a") as f:
+                        with open("skipped_email.txt", "a") as f:
                             # Increment the row counter
                             row_counter += 1
 
@@ -851,7 +852,8 @@ def login_to_apollo(workemail, password, vtiger_email, vtiger_pass, num_leads):
                             # Re-fetch the 4th column's text
                             columns = row.find_elements(By.XPATH, "./*")
                             if len(columns) >= 4:
-                                fourth_column_text = columns[3].text.strip()
+                                fourth_column = columns[3].text.strip()
+                                fourth_column_text = re.sub(r'\+\d+', '', fourth_column).strip()
                                 email_address = fourth_column_text.split('+')[0].strip()
 
                                 if '@' in email_address and '.' in email_address:
@@ -987,6 +989,7 @@ def login_to_apollo(workemail, password, vtiger_email, vtiger_pass, num_leads):
         txt_to_excel(txt_file, excel_file)
         driver.quit()
 
+        # Messagebox for notifying the user - Summary of the application
         message = f"\nLead Processing Summary:\n"
         message += f"Target Leads (User Defined): {target_leads}\n"
         message += f"Successful Leads Processed: {successful_leads}\n"
@@ -1007,28 +1010,25 @@ def txt_to_excel(txt_file, excel_file):
         # Try reading the file, handle inconsistent columns
         df = pd.read_csv(txt_file, sep=',', header=None, on_bad_lines='skip')  # Skip bad lines
 
-        # Define headers manually (you can adjust these based on your data)
+        # Define headers manually (adjust if needed)
         headers = [
             'Name', 'Position', 'Company', 'Email', 'Phone',
             'City', 'Country', 'Extracted Company Name'
         ]
-        
+
+        # Check if the number of columns matches the headers
+        if len(headers) != df.shape[1]:
+            print(f"Warning: Adjusting headers to match the {df.shape[1]} columns in the text file.")
+            headers = headers[:df.shape[1]]  # Truncate headers if there are fewer columns
+            headers += [f"Column{i}" for i in range(len(headers), df.shape[1])]  # Add generic headers if needed
+
         # Assign headers to the DataFrame
         df.columns = headers
-        
-        # Check if the output Excel file already exists
-        try:
-            existing_df = pd.read_excel(excel_file, engine='openpyxl')
-            # Append new data to the existing DataFrame
-            df = existing_df.append(df, ignore_index=True)
-        except FileNotFoundError:
-            # If the file doesn't exist, it's the first time creating it
-            pass
-        
-        # Write the DataFrame to Excel
+
+        # Clear and write the updated DataFrame to Excel
         df.to_excel(excel_file, index=False, engine='openpyxl')
 
-        print(f"Successfully converted {txt_file} to {excel_file} with headers")
+        print(f"Successfully converted {txt_file} to {excel_file}, clearing old data and writing new data.")
     except Exception as e:
         print(f"An error occurred: {e}")
 
@@ -1104,7 +1104,7 @@ def check_detail_company_name(file_path):
         driver.quit()  # Ensure the browser is closed at the end
 
 
-# This fucntion is to for data processing for 
+# This function is to for data processing for 
 def process_leads_files(file_paths):
     """
     Process multiple leads files and clean their data.
@@ -1225,6 +1225,7 @@ def vtiger_login(driver , vtiger_email , vtiger_pass,each_row_email,location_use
     checkbox = WebDriverWait(driver, 10).until(
         EC.presence_of_element_located((By.XPATH, checkbox_xpath))
     )
+    time.sleep(2)
     checkbox.click()
     
     try:
@@ -1286,6 +1287,29 @@ def vtiger_login(driver , vtiger_email , vtiger_pass,each_row_email,location_use
                     cleaned_row = ','.join(columns)
                     f.write(f"{cleaned_row}\n")
 
+            elif has_building_icon and not (has_comment_icon or has_person_icon or has_namecard_icon):
+                print("Overall Result: Accepted row (contains comments only)")
+                row_counter = 0  # Initialize a counter outside the processing loop
+                email_processed = True
+                # Process each row one at a time
+                with open("leads.txt", "a") as f:
+                    # Increment the row counter
+                    row_counter += 1
+
+                    # Split the row into columns
+                    columns = row_data_processed.split(',')
+
+                    # Apply cleaning logic for rows except row 5
+                    if row_counter != 5:
+                        # Check if the last column contains a '+' and a number
+                        if len(columns) > 0 and columns[-1].strip().startswith('+') and columns[-1].strip()[1:].isdigit():
+                            columns[-1] = ""  # Remove the '+number' from the last column
+
+                    # Rejoin the columns and write to the file
+                    cleaned_row = ','.join(columns)
+
+                    f.write(f"{cleaned_row}\n")
+
             elif has_comment_icon and not (has_person_icon or has_namecard_icon or has_building_icon):
                 print("Overall Result: Accepted row (contains comments only)")
                 row_counter = 0  # Initialize a counter outside the processing loop
@@ -1308,6 +1332,7 @@ def vtiger_login(driver , vtiger_email , vtiger_pass,each_row_email,location_use
                     cleaned_row = ','.join(columns)
 
                     f.write(f"{cleaned_row}\n")
+
             elif has_comment_icon and (has_person_icon or has_namecard_icon or has_building_icon):
                 print("Overall Result: Not accepted row (contains both comments and other icons)")
                 row_counter = 0  # Initialize a counter outside the processing loop
@@ -1358,16 +1383,20 @@ def vtiger_login(driver , vtiger_email , vtiger_pass,each_row_email,location_use
         EC.element_to_be_clickable((By.XPATH, "//*[contains(@class, 'fa-times') and contains(@class, 'c-pointer')]"))
     )
     close_button.click()
-
+    
     #Sign out part 
     signout_element = WebDriverWait(driver,10).until(
         EC.element_to_be_clickable((By.XPATH, "//*[@id='__BVID__12__BV_toggle_']/span/a/div[1]/span"))
     )
+    time.sleep(1)
     signout_element.click()
     logout_element = WebDriverWait(driver, 10).until(
         EC.element_to_be_clickable((By.XPATH, "//*[@title='Logout']"))
     )
+    time.sleep(1)
     logout_element.click()
+    time.sleep(2)
+    driver.close()
     # Switch back to the original tab
     driver.switch_to.window(driver.window_handles[0])
     # Original  is  driver.switch_to.window(original_tab)
