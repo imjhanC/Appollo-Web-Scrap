@@ -980,8 +980,9 @@ def login_to_apollo(workemail, password, vtiger_email, vtiger_pass, num_leads):
             'rejected_leads.txt',
             'rejected_leads_with_email.txt'
         ]
-        process_leads_files(files_to_process)
-        check_detail_company_name("leads.txt")
+        process_leads_files(files_to_process)   # This is for data preprocessing like removing bad column , missing lines before we check all the all details of a company
+        check_detail_company_name("leads.txt")  # Check all possible name of the company and put it back at the last column 
+        resave_file("leads.txt")                # This is to resave all the content inside the file before it has been transformed into an excel format 
 
         txt_file = "leads.txt"  # Path to the text file
         excel_file = "leads.xlsx"  # Desired output Excel file path
@@ -1066,9 +1067,14 @@ def check_detail_company_name(file_path):
 
                 columns = row.split(',')
 
+                # Skip already processed rows
+                if columns[-1].strip() and not columns[-1].startswith("-"):
+                    processed_rows.append(row)
+                    continue
+
                 # Determine the URL and search logic based on the last column
                 search_value = columns[2].strip()  # Use the third column for the search value
-                if columns[-1].strip() == 'Singapore':
+                if columns[-2].strip() == 'Singapore':  # Assuming 'Singapore' is the second last column
                     print(f"Performing search on https://www.sgpbusiness.com/ for: {search_value}")
                     results = search_and_extract(driver, "https://www.sgpbusiness.com/", search_value, "h6.list-group-item-heading.mb-0")
                 else:
@@ -1079,10 +1085,11 @@ def check_detail_company_name(file_path):
                 concatenated_results = "-".join(results)
 
                 # Ensure results are appended to the last column
-                if columns[-1].strip():
-                    columns[-1] += f",{concatenated_results}"
-                else:
-                    columns[-1] = concatenated_results
+                if len(columns) < len(rows[0].split(',')):
+                    # Add empty columns if the row is shorter
+                    columns.extend([''] * (len(rows[0].split(',')) - len(columns)))
+
+                columns[-1] = concatenated_results
 
                 # Rejoin the columns into a single row
                 cleaned_row = ','.join(columns)
@@ -1094,7 +1101,7 @@ def check_detail_company_name(file_path):
 
         # Optionally print processed rows for debugging
         for processed_row in processed_rows:
-            print(f"Processed row: {processed_row}")
+            print(f"Processed row: {processed_row}\n")
 
     except FileNotFoundError:
         print(f"File '{file_path}' not found.")
@@ -1103,12 +1110,40 @@ def check_detail_company_name(file_path):
     finally:
         driver.quit()  # Ensure the browser is closed at the end
 
+# This function is to resave all the content of the file before everything is transform into excel form 
+def resave_file(file_path):
+    try:
+        # Read the content of the file
+        with open(file_path, "r") as file:
+            lines = file.readlines()
 
-# This function is to for data processing for 
+        # Clean and reformat each line
+        cleaned_lines = []
+        for line in lines:
+            # Strip leading/trailing whitespaces
+            cleaned_line = line.strip()
+
+            # Skip empty lines
+            if cleaned_line:
+                cleaned_lines.append(cleaned_line)
+
+        # Write cleaned lines back to the file
+        with open(file_path, "w") as file:
+            for line in cleaned_lines:
+                file.write(line + "\n")
+
+        print(f"File '{file_path}' has been successfully resaved.")
+    except FileNotFoundError:
+        print(f"File '{file_path}' not found.")
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
+
+# This function is to for data processing for each lead
 def process_leads_files(file_paths):
     """
     Process multiple leads files and clean their data.
-    
+
     Args:
         file_paths (list): List of file paths to process
     """
@@ -1117,58 +1152,63 @@ def process_leads_files(file_paths):
         lines = input_text.strip().split('\n')
         cleaned_rows = []
         current_row = []
-        
+
         # Merge split rows
         for line in lines:
             if not line.strip():
                 continue
-                
+
             if ',' in line and 'Engineer' in line.split(',')[1].strip():
                 if current_row:
                     cleaned_rows.append(' '.join(current_row))
                 current_row = [line]
             else:
                 current_row.append(line)
-        
+
         if current_row:
             cleaned_rows.append(' '.join(current_row))
-        
-        # Process each row to remove specified columns
+
+        # Process each row to remove specified columns, skipping rows with exactly 8 columns
         final_rows = []
         for row in cleaned_rows:
             columns = row.split(',')
-            
+
+            # Skip rows with exactly 8 columns
+            if len(columns) == 8:
+                final_rows.append(row)
+                continue
+
             # Clean up the 4th column (email/phone) - remove +number
             if len(columns) > 3:
                 columns[3] = columns[3].split('+')[0].strip()
-            
+
             # Keep only the desired columns
             kept_columns = []
             for i, col in enumerate(columns):
                 if i <= 4 or i in [7, 8] or i == 12:
                     kept_columns.append(col.strip())
-            
+
             final_rows.append(','.join(kept_columns))
-        
+
         return final_rows
-    
+
     # Process each file
     for file_path in file_paths:
         try:
             # Read input file
             with open(file_path, 'r') as file:
                 input_text = file.read()
-            
+
             # Clean the data
             cleaned_data = clean_data(input_text)
-            
+
             # Write back to the same file
             with open(file_path, 'w') as file:
                 for row in cleaned_data:
                     file.write(row + '\n')
-            
+
             print(f"Successfully processed: {file_path}")
-            
+
         except Exception as e:
             print(f"Error processing {file_path}: {str(e)}")
 
