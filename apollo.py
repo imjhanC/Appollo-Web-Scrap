@@ -178,9 +178,10 @@ def login_to_apollo(workemail, password, vtiger_email, vtiger_pass, num_leads):
                     
                     # Handle "Access email" case
                     if fourth_column_text == "Access email":
+                        # Original would be ".//button[contains(@class, 'zp_qe0Li') and .//span[text()='Access email']]" but it will click the Access phone button too ( Please be careful !!)
                         access_email_buttons = row.find_elements(
                             By.XPATH,
-                            ".//button[contains(@class, 'zp_qe0Li') and .//span[text()='Access email']]"
+                            "//*[@id='table-row-0']/div[4]/div/span/button/span"  # Now it clicks the Access phone button only 
                         )
                         if access_email_buttons:
                             # Click the button and wait for 5 seconds
@@ -195,6 +196,12 @@ def login_to_apollo(workemail, password, vtiger_email, vtiger_pass, num_leads):
                                 email_address = fourth_column_text.split('+')[0].strip()
 
                                 if '@' in email_address and '.' in email_address:
+
+                                    # Update row_data_processed with the new email address
+                                    row_data = [column.text for column in columns]  # Get fresh data
+                                    row_data[3] = email_address  # Update the email column
+                                    row_data_processed = ", ".join(row_data)  # Recreate processed string
+
                                     with open("tracking.txt", "a") as f:
                                         f.write(f"{email_address}\n")
                                     
@@ -491,55 +498,67 @@ def resave_file(file_path):
 # This function is to for data processing for each lead
 def process_leads_files(file_paths):
     """
-    Process multiple leads files and clean their data.
-
+    Process multiple leads files and clean their data to ensure exactly 7 columns per row.
+    Adds a trailing comma after the last column.
+    
     Args:
         file_paths (list): List of file paths to process
     """
     def clean_data(input_text):
-        # Split into lines and initialize variables
-        lines = input_text.strip().split('\n')
+        # Split into lines and remove empty lines
+        lines = [line.strip() for line in input_text.split('\n') if line.strip()]
         cleaned_rows = []
-        current_row = []
-
-        # Merge split rows
+        
         for line in lines:
-            if not line.strip():
+            # Split the line by comma and trim whitespace
+            columns = [col.strip() for col in line.split(',')]
+            
+            # Skip obviously invalid rows
+            if len(columns) < 3:
                 continue
-
-            if ',' in line and 'Engineer' in line.split(',')[1].strip():
-                if current_row:
-                    cleaned_rows.append(' '.join(current_row))
-                current_row = [line]
-            else:
-                current_row.append(line)
-
-        if current_row:
-            cleaned_rows.append(' '.join(current_row))
-
-        # Process each row to remove specified columns, skipping rows with exactly 8 columns
-        final_rows = []
-        for row in cleaned_rows:
-            columns = row.split(',')
-
-            # Skip rows with exactly 8 columns
-            if len(columns) == 8:
-                final_rows.append(row)
-                continue
-
-            # Clean up the 4th column (email/phone) - remove +number
-            if len(columns) > 3:
-                columns[3] = columns[3].split('+')[0].strip()
-
-            # Keep only the desired columns
-            kept_columns = []
-            for i, col in enumerate(columns):
-                if i <= 4 or i in [8, 9] :
-                    kept_columns.append(col.strip())
-
-            final_rows.append(','.join(kept_columns))
-
-        return final_rows
+            
+            # Extract the relevant columns
+            name = columns[0]
+            role = columns[1]
+            company = columns[2]
+            email_access = columns[3]
+            mobile_access = columns[4]
+            # Find the city/location (it appears before Malaysia/Singapore)
+            city = None
+            country = None
+            
+            # Search for the location and country
+            for i in range(len(columns)):
+                if columns[i].strip() in ['Malaysia', 'Singapore']:
+                    country = columns[i].strip()
+                    # City is the value before the country
+                    if i > 0:
+                        city = columns[i-1].strip()
+                    break
+            
+            # If no city/country found, use defaults
+            if not city:
+                city = ''
+            if not country:
+                country = 'Malaysia'
+            
+            # Combine the columns in the correct order
+            cleaned_row = [
+                name,
+                role,
+                company,
+                email_access,
+                mobile_access,
+                city,
+                country
+            ]
+            
+            # Only add rows that have at least a name and role
+            if cleaned_row[0] and cleaned_row[1]:
+                # Add the trailing comma after joining the columns
+                cleaned_rows.append(','.join(cleaned_row) + ',')
+        
+        return cleaned_rows
 
     # Process each file
     for file_path in file_paths:
