@@ -35,7 +35,7 @@ class TwoFactorCountdown:
     def create_continue_window(self):
         # Ensure this runs in the main thread
         self.root = tk.Tk()
-        self.root.title("Microsoft 2FA")
+        self.root.title("Click to continue")
         self.root.wm_attributes("-topmost", 1)
         self.root.geometry("300x100")
         
@@ -61,7 +61,7 @@ class TwoFactorCountdown:
         self.root.mainloop()
 
 # This is the logic for interacting inside the apollo.io
-def login_to_apollo(workemail, password, vtiger_email, vtiger_pass, num_leads):
+def login_to_apollo(vtiger_email, vtiger_pass, num_leads):
     driver = None
     countdown = None 
 
@@ -319,20 +319,26 @@ def login_to_apollo(workemail, password, vtiger_email, vtiger_pass, num_leads):
         print(f"Error in login to Apollo part 1: {str(e)}")
     finally:
         driver.quit()
-        # List of files to process
-        files_to_process = [
-            'leads.txt',
-            'rejected_leads.txt',
-            'rejected_leads_with_email.txt'
-        ]
-        process_leads_files(files_to_process)   # This is for data preprocessing like removing bad column , missing lines before we check all the all details of a company
-        check_detail_company_name("leads.txt")  # Check all possible name of the company and put it back at the last column 
-        resave_file("leads.txt")                # This is to resave all the content inside the file before it has been transformed into an excel format 
+        
+        # Data Preprocessing
+        result_leads_file = process_leads_file('leads.txt', 'leads.txt')
+        print(f"Processing leads.txt: {'Successful' if result_leads_file else 'Failed'}")
 
-        txt_file = "leads.txt"  # Path to the text file
-        excel_file = "leads.xlsx"  # Desired output Excel file path
+        result_rejected_leads = process_leads_file('rejected_leads.txt','rejected_leads.txt')
+        print(f"Processing rejected_leads.txt: {'Successful' if result_rejected_leads else 'Failed'}")
 
-        txt_to_excel(txt_file, excel_file)
+        result_rejected_leads_with_email = process_leads_file('rejected_leads_with_email.txt','rejected_leads_with_email.txt')
+        print(f"Processing rejected_leads_with_email.txt: {'Successful' if result_rejected_leads_with_email else 'Failed'}")
+
+    
+        check_detail_company_name('leads.txt')
+        txt_file_leads = 'leads.txt'
+        excel_file_leads = 'leads.xlsx'
+
+        txt_to_excel(txt_file_leads, excel_file_leads)
+        txt_to_excel_rejected('rejected_leads.txt','rejected_leads.xlsx')
+        txt_to_excel_rejected('rejected_leads_with_email.txt','rejected_leads_with_email.xlsx')
+        
         # Messagebox for notifying the user - Summary of the application
         message = (
             f"\nLead Processing Summary:\n"
@@ -377,28 +383,168 @@ def txt_to_excel(txt_file, excel_file):
     except Exception as e:
         print(f"An error occurred: {e}")
 
+# This function is for transforming those rejected texfiles into excel file 
+def txt_to_excel_rejected(txt_file, excel_file):
+    try:
+        # Check if the text file exists
+        if not os.path.exists(txt_file):
+            print(f"File {txt_file} does not exist. Skipping transformation.")
+            return
+
+        # Read the file and handle inconsistent columns
+        df = pd.read_csv(txt_file, sep=',', header=None, on_bad_lines='skip')  # Skip bad lines
+
+        # Define headers manually
+        headers = [
+            'Name', 'Position', 'Company', 'Email', 'Phone',
+            'City', 'Country'
+        ]
+
+        # Check if the number of columns matches the headers
+        if len(headers) != df.shape[1]:
+            print(f"Warning: Adjusting headers to match the {df.shape[1]} columns in the text file.")
+            headers = headers[:df.shape[1]]  # Truncate headers if there are fewer columns
+            headers += [f"Column{i}" for i in range(len(headers), df.shape[1])]  # Add generic headers if needed
+
+        # Assign headers to the DataFrame
+        df.columns = headers
+
+        # Clear and write the updated DataFrame to Excel
+        df.to_excel(excel_file, index=False, engine='openpyxl')
+
+        print(f"Successfully converted {txt_file} to {excel_file}, clearing old data and writing new data.")
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
+# This function is to process all the data extracted on Apollo.io ( Data Preprocessing )
+def process_leads_file(input_file, output_file):
+    """
+    Process the leads file by combining split rows into single lines
+    and write the result to a new file. Skips processing if input file doesn't exist.
+    """
+    # First check if input file exists
+    if not os.path.exists(input_file):
+        print(f"Warning: Input file '{input_file}' does not exist. Skipping processing.")
+        return False
+        
+    def clean_and_extract_columns(input_file, output_file):
+        try:
+            # Clean email (4th column) if any pattern like +1
+            def clean_email(email_text):
+                email_match = re.search(r'([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})', email_text)
+                return email_match.group(1) if email_match else email_text.strip()
+            
+            with open(input_file, 'r') as f:
+                lines = f.readlines()
+            
+            processed_entries = []
+            for line in lines:
+                # Split the line into columns
+                columns = line.strip().split(',')
+                
+                # Extract and clean required columns
+                if len(columns) >= 9:  # Ensure we have enough columns
+                    name = columns[0].strip()
+                    role = columns[1].strip()
+                    company = columns[2].strip()
+                    email = clean_email(columns[3].strip())
+                    phone = columns[4].strip()
+                    # columns[5] is empty
+                    # columns[6] is empty
+                    status = columns[7].strip()
+                    location = columns[8].strip()
+                    
+                    # Combine the extracted columns
+                    new_entry = f"{name},{role},{company},{email},{phone},{status},{location}"
+                    processed_entries.append(new_entry)
+            
+            # Write to output file
+            with open(output_file, 'w') as f:
+                # Write entries
+                for entry in processed_entries:
+                    f.write(f"{entry}\n")
+            return True
+            
+        except Exception as e:
+            print(f"Error in clean_and_extract_columns: {str(e)}")
+            return False
+    
+    try:
+        with open(input_file, 'r') as f:
+            content = f.read()
+        
+        # Split the content into rough entries (split on double newlines)
+        rough_entries = content.strip().split('\n\n')
+        
+        processed_entries = []
+        current_entry = []
+        
+        for entry in rough_entries:
+            lines = entry.strip().split('\n')
+            
+            for line in lines:
+                # Skip empty lines
+                if not line.strip():
+                    continue
+                    
+                # If line starts with a typical lead entry pattern 
+                # (Name followed by role and company)
+                if re.match(r'^[A-Za-z\s]+,\s*(Engineer|[A-Za-z\s]+),', line):
+                    # If we have a previous entry, save it
+                    if current_entry:
+                        processed_entries.append(' '.join(current_entry))
+                    current_entry = [line]
+                else:
+                    # This is a continuation line
+                    if current_entry:
+                        # Remove any leading commas if they exist
+                        line = line.lstrip(',').strip()
+                        current_entry.append(line)
+        
+        # Add the last entry if it exists
+        if current_entry:
+            processed_entries.append(' '.join(current_entry))
+        
+        # Write to output file
+        with open(output_file, 'w') as f:
+            for entry in processed_entries:
+                # Clean up any multiple spaces and extra commas
+                cleaned_entry = re.sub(r'\s+', ' ', entry)
+                cleaned_entry = re.sub(r',\s*,', ',', cleaned_entry)
+                f.write(cleaned_entry + '\n')
+        
+        # Process the cleaned file further
+        return clean_and_extract_columns(output_file, output_file)
+        
+    except Exception as e:
+        print(f"Error processing file: {str(e)}")
+        return False
+    
 # This function is to extract all the possible company names 
 def check_detail_company_name(file_path):
     def initialize_driver():
         options = uc.ChromeOptions()
         options.add_argument("--disable-blink-features=AutomationControlled")
-        #options.add_argument("--disable-blink-features=AutomationControlled")
         options.add_argument('--disable-popup-blocking')
         options.add_argument("--start-maximized")
         driver = uc.Chrome(options=options)
         return driver
 
     def search_and_extract(driver, url, search_value, result_selector):
-        driver.get(url)  # Navigate to the URL
-        search_input = driver.find_element(By.ID, "search_val")  # Locate search input field
-        search_input.clear()  # Clear any previous value
-        search_input.send_keys(search_value)  # Enter the search value
-        search_input.send_keys(Keys.RETURN)  # Hit Enter to submit the search
-        time.sleep(3)  # Wait for results to load
+        try:
+            driver.get(url)  # Navigate to the URL
+            search_input = driver.find_element(By.ID, "search_val")  # Locate search input field
+            search_input.clear()  # Clear any previous value
+            search_input.send_keys(search_value)  # Enter the search value
+            search_input.send_keys(Keys.RETURN)  # Hit Enter to submit the search
+            time.sleep(3)  # Wait for results to load
 
-        # Extract results
-        results = driver.find_elements(By.CSS_SELECTOR, result_selector)
-        return [result.text.strip() for result in results]
+            # Extract results
+            results = driver.find_elements(By.CSS_SELECTOR, result_selector)
+            return [result.text.strip() for result in results]
+        except Exception as e:
+            print(f"Error in search_and_extract: {str(e)}")
+            return []
 
     try:
         driver = initialize_driver()
@@ -413,21 +559,22 @@ def check_detail_company_name(file_path):
                     continue  # Skip empty rows
 
                 columns = row.split(',')
-
-                # Skip already processed rows
-                if columns[-1].strip() and not columns[-1].startswith("-"):
+                
+                # Check if this row has already been processed ( Skipping process )
+                if len(columns) > 7 and columns[7].strip() and not columns[7].strip().startswith("-"):
                     processed_rows.append(row)
                     continue
 
-                # Determine the URL and search logic based on the last column
-                search_value = columns[2].strip()  # Use the third column for the search value
+                # Use the company name (third column) for search
+                search_value = columns[2].strip()
                 results = []
 
-                if columns[-2].strip() == 'Singapore':  # Assuming 'Singapore' is the second last column
+                # Check the location (last column) to determine search strategy
+                if columns[-1].strip() == 'Singapore':
                     print(f"Performing search on https://www.sgpbusiness.com/ for: {search_value}")
                     results = search_and_extract(driver, "https://www.sgpbusiness.com/", search_value, "h6.list-group-item-heading.mb-0")
 
-                    if not results:  # No results from SGP Business
+                    if not results:
                         print(f"No results on https://www.sgpbusiness.com/, switching to https://www.mysbusiness.com/")
                         results = search_and_extract(driver, "https://www.mysbusiness.com/", search_value, "h4.list-group-item-heading")
                 else:
@@ -435,151 +582,35 @@ def check_detail_company_name(file_path):
                     results = search_and_extract(driver, "https://www.mysbusiness.com/", search_value, "h4.list-group-item-heading")
 
                     if not results:
+                        print(f"No results on https://www.mysbusiness.com/, switching to https://www.sgpbusiness.com/")
                         results = search_and_extract(driver, "https://www.sgpbusiness.com/", search_value, "h6.list-group-item-heading.mb-0")
 
                 # Join multiple results with a hyphen, or set "No result" if no results found
                 concatenated_results = "-".join(results) if results else "No result"
 
-                # Ensure results are appended to the last column
-                if len(columns) < len(rows[0].split(',')):
-                    # Add empty columns if the row is shorter
-                    columns.extend([''] * (len(rows[0].split(',')) - len(columns)))
+                # Add the results as a new column
+                new_row = row + "," + concatenated_results
+                processed_rows.append(new_row)
 
-                columns[-1] = concatenated_results
+                # Print progress
+                print(f"Processed {search_value}: {concatenated_results}")
+                time.sleep(1)  # Small delay between searches
 
-                # Rejoin the columns into a single row
-                cleaned_row = ','.join(columns)
-                processed_rows.append(cleaned_row)
-
-        # Clear the file and write all processed rows back
+        # Write all processed rows back to the file
         with open(file_path, "w") as out_file:
             out_file.write("\n".join(processed_rows) + "\n")
 
-        # Optionally print processed rows for debugging
-        for processed_row in processed_rows:
-            print(f"Processed row: {processed_row}\n")
+        print("\nProcessing completed. Results have been saved to the file.")
 
     except FileNotFoundError:
         print(f"File '{file_path}' not found.")
     except Exception as e:
-        print(f"An error occurred: {e}")
+        print(f"An error occurred: {str(e)}")
     finally:
-        driver.quit()  # Ensure the browser is closed at the end
-
-# This function is to resave all the content of the file before everything is transform into excel form 
-def resave_file(file_path):
-    try:
-        # Read the content of the file
-        with open(file_path, "r", encoding="utf-8", errors="replace") as file:
-            lines = file.readlines()
-
-        # Clean and reformat each line
-        cleaned_lines = []
-        for line in lines:
-            # Strip leading/trailing whitespaces
-            cleaned_line = line.strip()
-
-            # Skip empty lines
-            if cleaned_line:
-                cleaned_lines.append(cleaned_line)
-
-        # Write cleaned lines back to the file
-        with open(file_path, "w", encoding="utf-8") as file:
-            for line in cleaned_lines:
-                file.write(line + "\n")
-
-        print(f"File '{file_path}' has been successfully resaved.")
-    except FileNotFoundError:
-        print(f"File '{file_path}' not found.")
-    except Exception as e:
-        print(f"An error occurred: {e}")
-
-
-# This function is to for data processing for each lead
-def process_leads_files(file_paths):
-    """
-    Process multiple leads files and clean their data to ensure exactly 7 columns per row.
-    Adds a trailing comma after the last column.
-    
-    Args:
-        file_paths (list): List of file paths to process
-    """
-    def clean_data(input_text):
-        # Split into lines and remove empty lines
-        lines = [line.strip() for line in input_text.split('\n') if line.strip()]
-        cleaned_rows = []
-        
-        for line in lines:
-            # Split the line by comma and trim whitespace
-            columns = [col.strip() for col in line.split(',')]
-            
-            # Skip obviously invalid rows
-            if len(columns) < 3:
-                continue
-            
-            # Extract the relevant columns
-            name = columns[0]
-            role = columns[1]
-            company = columns[2]
-            email_access = columns[3]
-            mobile_access = columns[4]
-            # Find the city/location (it appears before Malaysia/Singapore)
-            city = None
-            country = None
-            
-            # Search for the location and country
-            for i in range(len(columns)):
-                if columns[i].strip() in ['Malaysia', 'Singapore']:
-                    country = columns[i].strip()
-                    # City is the value before the country
-                    if i > 0:
-                        city = columns[i-1].strip()
-                    break
-            
-            # If no city/country found, use defaults
-            if not city:
-                city = ''
-            if not country:
-                country = 'Malaysia'
-            
-            # Combine the columns in the correct order
-            cleaned_row = [
-                name,
-                role,
-                company,
-                email_access,
-                mobile_access,
-                city,
-                country
-            ]
-            
-            # Only add rows that have at least a name and role
-            if cleaned_row[0] and cleaned_row[1]:
-                # Add the trailing comma after joining the columns
-                cleaned_rows.append(','.join(cleaned_row) + ',')
-        
-        return cleaned_rows
-
-    # Process each file
-    for file_path in file_paths:
         try:
-            # Read input file
-            with open(file_path, 'r') as file:
-                input_text = file.read()
-
-            # Clean the data
-            cleaned_data = clean_data(input_text)
-
-            # Write back to the same file
-            with open(file_path, 'w') as file:
-                for row in cleaned_data:
-                    file.write(row + '\n')
-
-            print(f"Successfully processed: {file_path}")
-
-        except Exception as e:
-            print(f"Error processing {file_path}: {str(e)}")
-
+            driver.quit()  # Ensure the browser is closed at the end
+        except:
+            pass
 
 def vtiger_login(driver , vtiger_email , vtiger_pass,each_row_email,row_data_processed):
     # Save the current window handle (original tab)
@@ -813,17 +844,15 @@ def vtiger_login(driver , vtiger_email , vtiger_pass,each_row_email,row_data_pro
     
 
 def on_submit(root):
-    work_email = workemail_entry.get()
-    password = password_entry.get()
     vtiger_email_entry = vtiger_email.get()
     vtiger_password_entry = vtiger_password.get()
     num =  num_leads.get() # Number of leads 
 
-    if not work_email or not password:
+    if not vtiger_email_entry or not vtiger_password_entry:
         messagebox.showerror("Input error", "Please enter all fields !")
         return
     
-    threading.Thread(target=login_to_apollo, args=(work_email,password,vtiger_email_entry,vtiger_password_entry,num)).start()
+    threading.Thread(target=login_to_apollo, args=(vtiger_email_entry,vtiger_password_entry,num)).start()
     root.destroy()
 
 def apollo_login():
@@ -860,25 +889,7 @@ def apollo_login():
     bold_font = tkfont.Font(weight="bold")
 
     # Work email label and entry
-    ttk.Label(frm, text="Apollo.io account credential", font=bold_font).grid(column=0, row=0, columnspan=2, pady=(0, 10), sticky="w")
-    ttk.Label(frm, text="Apollo.io Work Email:").grid(column=0, row=1, sticky="w", padx=10, pady=5)
-    global workemail_entry
-    workemail_entry = ttk.Entry(frm, width=50)
-    workemail_entry.grid(column=1, row=1, padx=10, pady=5, sticky="w")
-
-    # Password label, entry, and eye button
-    ttk.Label(frm, text="Apollo.io Password:").grid(column=0, row=2, sticky="w", padx=10)
     
-    # Password entry
-    global password_entry
-    password_entry = ttk.Entry(frm, width=50, show="*")  # Password masked by default
-    password_entry.grid(column=1, row=2, padx=10, pady=(15, 20), sticky="w")
-    
-    # Eye button for Apollo password
-    eye_button_apollo = ttk.Button(frm, text="👁")
-    eye_button_apollo.grid(column=2, row=2, pady=0, padx=5, sticky="w")
-    eye_button_apollo.bind("<ButtonPress-1>", lambda event: show_password(event, password_entry))  # Show password
-    eye_button_apollo.bind("<ButtonRelease-1>", lambda event: hide_password(event, password_entry))  # Hide password
 
     # VTiger Email and Password
     ttk.Label(frm, text="VTiger account credential", font=bold_font).grid(column=0, row=3, columnspan=2, pady=(20, 10), sticky="w")
