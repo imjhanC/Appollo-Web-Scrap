@@ -330,15 +330,18 @@ def login_to_apollo(vtiger_email, vtiger_pass, num_leads):
         result_rejected_leads_with_email = process_leads_file('rejected_leads_with_email.txt','rejected_leads_with_email.txt')
         print(f"Processing rejected_leads_with_email.txt: {'Successful' if result_rejected_leads_with_email else 'Failed'}")
 
+        results_skipped_email = process_leads_file('skipped_email.txt','skipped_email.txt')
+        print(f"Processing skipped_email.txt: {'Successful' if results_skipped_email else 'Failed'}")
     
         check_detail_company_name('leads.txt')
         txt_file_leads = 'leads.txt'
         excel_file_leads = 'leads.xlsx'
 
         txt_to_excel(txt_file_leads, excel_file_leads)
-        txt_to_excel_rejected('rejected_leads.txt','rejected_leads.xlsx')
+        txt_to_excel_rejected('rejected_leads.txt','rejected_leads.xlsx') 
         txt_to_excel_rejected('rejected_leads_with_email.txt','rejected_leads_with_email.xlsx')
-        
+        txt_to_excel_rejected('skipped_email.txt','skipped_email.xlsx')
+
         # Messagebox for notifying the user - Summary of the application
         message = (
             f"\nLead Processing Summary:\n"
