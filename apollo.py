@@ -9,7 +9,6 @@ import threading
 import time 
 import pickle
 import tkinter.font as tkfont
-from PIL import Image, ImageTk 
 import pandas as pd
 import undetected_chromedriver as uc
 from selenium.webdriver.chrome.options import Options
