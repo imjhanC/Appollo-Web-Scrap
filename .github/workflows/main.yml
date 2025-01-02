@@ -30,7 +30,7 @@ jobs:
 
     - name: Compress Build Directory
       run: |
-        powershell Compress-Archive -Path "build\exe.win-amd64-3.10\*" -DestinationPath "apollo.zip"
+        powershell Compress-Archive -Path "build/exe.win-amd64-3.10/*" -DestinationPath "apollo.zip"
 
     - name: Upload Build Artifact
       uses: actions/upload-artifact@v3
