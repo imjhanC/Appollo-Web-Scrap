@@ -1,0 +1,66 @@
+name: Build and Deploy Executable
+
+on:
+  push:
+    branches:
+      - main  # Trigger on pushes to the main branch
+  pull_request:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Install Dependencies
+      run: |
+        pip install --upgrade pip
+        pip install cx_Freeze pandas selenium undetected-chromedriver fake_useragent
+
+    - name: Build Executable
+      run: |
+        python setup.py build
+
+    - name: Compress Build Directory
+      run: |
+        powershell Compress-Archive -Path "build\exe.win-amd64-3.10\*" -DestinationPath "apollo.zip"
+
+    - name: Upload Build Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: apollo-exe
+        path: apollo.zip
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Download Build Artifact
+      uses: actions/download-artifact@v3
+      with:
+        name: apollo-exe
+
+    - name: Create Release
+      uses: actions/create-release@v1
+      with:
+        tag_name: v1.0.0
+        release_name: "Apollo v1.0.0"
+        draft: false
+        prerelease: false
+        generate_release_notes: true
+
+    - name: Upload Release Asset
+      uses: actions/upload-release-asset@v1
+      with:
+        upload_url: ${{ steps.create-release.outputs.upload_url }}
+        asset_path: apollo.zip
+        asset_name: apollo.zip
+        asset_content_type: application/zip
