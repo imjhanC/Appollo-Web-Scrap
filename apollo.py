@@ -11,6 +11,7 @@ import pickle
 import tkinter.font as tkfont
 import pandas as pd
 import undetected_chromedriver as uc
+from seleniumbase import SB
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
@@ -623,6 +624,26 @@ def vtiger_login(driver , vtiger_email , vtiger_pass,each_row_email,row_data_pro
     time.sleep(2)  # Give some time for the tab to open
     driver.switch_to.window(driver.window_handles[-1])  # Switch to the new tab
     print("\nVTiger Logging in...")
+
+     # Bypass Cloudflare using SeleniumBase
+    def verify_success(sb):
+        sb.assert_element('img[alt="Logo Assembly"]', timeout=4)
+        sb.sleep(3)
+
+    with SB(uc=True) as sb:  # Use SeleniumBase with undetected Chrome
+        sb.switch_to(driver)  # Use the existing Selenium WebDriver instance
+        try:
+            verify_success(sb)  # Verify successful load of the page
+        except Exception:
+            if sb.is_element_visible('input[value*="Verify"]'):
+                sb.uc_click('input[value*="Verify"]')
+            else:
+                sb.uc_gui_click_captcha()  # Handle CAPTCHA if present
+            try:
+                verify_success(sb)
+            except Exception:
+                raise Exception("CAPTCHA detection failed!")
+            
     # If you want to debug the email, use the line below it 
     #print("Row by each row: " + each_row_email)
     email_field = WebDriverWait(driver, 10).until(
