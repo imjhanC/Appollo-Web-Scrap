@@ -405,6 +405,8 @@ def vtiger_login(sb, vtiger_email, vtiger_pass, each_row_email, row_data_process
 
     # Global search
     time.sleep(5)
+    # Ensure login is complete by waiting for the user menu or dashboard
+    sb.wait_for_element('[title="Global Search"]', timeout=15)  # Adjust selector based on VTiger's UI
     sb.click('[title="Global Search"]',timeout=20)
     sb.type('#global_search', each_row_email)
     sb.find_element('#global_search').send_keys(Keys.ENTER)
@@ -476,20 +478,24 @@ def vtiger_login(sb, vtiger_email, vtiger_pass, each_row_email, row_data_process
     
     # Close search results
     sb.click('.fa-times.c-pointer')
-    
-    # Sign out process
-    sb.click('#__BVID__12__BV_toggle_ span a div span')
-    sb.sleep(1)
-    sb.click('[title="Logout"]')
-    sb.sleep(2)
-    
-    # Close current window and switch back to original
-    sb.driver.close()
 
-    #sb.switch_to_tab(1)
-    sb.switch_to_default_window()
-    print("Switched back to the original tab.")
+    #To prevent switching to original tab without logging out and closing VTiger tab
+    try:
+        # Sign out process
+        sb.click('#__BVID__12__BV_toggle_ span a div span')
+        sb.sleep(1)
+        sb.click('[title="Logout"]')
+        sb.sleep(2)
     
+        # Close current window and switch back to original
+        sb.driver.close()
+
+        #sb.switch_to_tab(1)
+        sb.switch_to_default_window()
+        print("Switched back to the original tab.")
+    except Exception as e:
+        print(f"Error during logout process: {e}")
+
     return email_processed
 
 # This function is to transform textfile to excel file 
@@ -659,17 +665,30 @@ def process_leads_file(input_file, output_file):
 
 # This function is to extract all the possible company names
 def check_detail_company_name(file_path):
-    def search_and_extract(sb, url, search_value, result_selector):
+    def search_and_extract(sb, search_value, result_selector):
         try:
-            sb.open(url)  # Navigate to URL using SeleniumBase
-            
-            # Wait for and interact with search input
-            sb.wait_for_element("#search_val")
-            sb.clear("#search_val")
-            
+            search_input_css = "#search_val"
+            sb.wait_for_element_present(search_input_css, timeout=10)
+
+            # Wait for the input field to be visible, enabled, and interactable
+            WebDriverWait(sb.driver, 10).until(
+                EC.element_to_be_clickable((By.CSS_SELECTOR, search_input_css))
+            )
+
+            search_input = sb.get_element(search_input_css)
+            search_input.clear()  # Clear the field if needed
+            sb.click("body")
+            time.sleep(0.5)
+
+            search_input.click()
+            time.sleep(0.5)
             # Type the search value and send RETURN key
-            search_input = sb.get_element("#search_val")
             search_input.send_keys(search_value + Keys.RETURN)
+
+            # Wait for results to load
+            WebDriverWait(sb.driver, 10).until(
+                EC.presence_of_all_elements_located((By.CSS_SELECTOR, result_selector))
+            )
             
             # Wait for results to load
             time.sleep(3)
@@ -679,14 +698,20 @@ def check_detail_company_name(file_path):
             return [result.text.strip() for result in results]
             
         except Exception as e:
-            print(f"Error in search_and_extract: {str(e)}")
+            print(f"Error in search_and_extract at with search value '{search_value}': {str(e)}")
             return []
 
     try:
+        sg_selector = "h6.list-group-item-heading.mb-0"
+        my_selector = "h4.list-group-item-heading"
         # Initialize SeleniumBase with undetected chromedriver
         with SB(uc=True) as sb:
             # Configure browser settings
             sb.maximize_window()
+
+            #Preload sites to render elements
+            sb.open("https://www.mysbusiness.com/")
+            sb.open("https://www.sgpbusiness.com/")
             
             with open(file_path, "r") as f:
                 rows = f.readlines()
@@ -705,44 +730,28 @@ def check_detail_company_name(file_path):
                         continue
 
                     # Get company name for search
+                    search_value = ''
                     search_value = columns[2].strip()
                     results = []
 
                     # Check location and determine search strategy
                     if columns[-1].strip() == 'Singapore':
-                        print(f"Performing search on https://www.sgpbusiness.com/ for: {search_value}")
+                        print(f"Performing search on SG for: {search_value}")
+                        sb.open("https://www.sgpbusiness.com/")
                         results = search_and_extract(
                             sb,
-                            "https://www.sgpbusiness.com/",
                             search_value,
-                            "h6.list-group-item-heading.mb-0"
+                            sg_selector
                         )
 
-                        if not results:
-                            print(f"No results on https://www.sgpbusiness.com/, switching to https://www.mysbusiness.com/")
-                            results = search_and_extract(
-                                sb,
-                                "https://www.mysbusiness.com/",
-                                search_value,
-                                "h4.list-group-item-heading"
-                            )
                     else:
-                        print(f"Performing search on https://www.mysbusiness.com/ for: {search_value}")
+                        print(f"Performing search on MY for: {search_value}")
+                        sb.open("https://www.mysbusiness.com/")
                         results = search_and_extract(
                             sb,
-                            "https://www.mysbusiness.com/",
                             search_value,
-                            "h4.list-group-item-heading"
+                            my_selector
                         )
-
-                        if not results:
-                            print(f"No results on https://www.mysbusiness.com/, switching to https://www.sgpbusiness.com/")
-                            results = search_and_extract(
-                                sb,
-                                "https://www.sgpbusiness.com/",
-                                search_value,
-                                "h6.list-group-item-heading.mb-0"
-                            )
 
                     # Process results
                     concatenated_results = "-".join(results) if results else "No result"
